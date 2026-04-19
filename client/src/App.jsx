@@ -20,8 +20,8 @@ import AdminDashboard from './admin/AdminDashboard';
 import ProtectedRoute from './components/ProtectedRoute';
 
 // Round Components
-import Round1Gateway from './round0/pages/round0gateway';
-import Quizround0 from './round0/pages/Quizround0';
+import Round1Gateway from './round1/pages/Round1gateway';
+import QuizRound1 from './round1/pages/QuizRound1';
 
 import Round2Gateway from './round2/pages/Round2gateway';
 import TreasureHuntRound2 from './round2/pages/TreasureHuntRound2';
@@ -68,7 +68,7 @@ const App = () => {
             path="/round1/game"
             element={
               <PrivateRoute roundNumber={1}>
-                <Quizround0 />
+                <QuizRound1 />
               </PrivateRoute>
             }
           />

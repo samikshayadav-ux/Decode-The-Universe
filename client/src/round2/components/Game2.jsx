@@ -1,18 +1,5 @@
 import React, { useState } from "react";
-
-/**
- * 4x4 Sudoku (easy)
- * - 0 = empty cell
- * - Boxes are 2x2
- *
- * Solution used for validation:
- * [
- *  [1,2,3,4],
- *  [3,4,1,2],
- *  [2,1,4,3],
- *  [4,3,2,1]
- * ]
- */
+import { motion, AnimatePresence } from "framer-motion";
 
 const PUZZLE = [
   [1, 0, 0, 4],
@@ -30,110 +17,96 @@ const SOLUTION = [
 
 const Game2 = ({ onComplete }) => {
   const [grid, setGrid] = useState(PUZZLE.map((r) => [...r]));
-  const [message, setMessage] = useState("");
+  const [feedback, setFeedback] = useState(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleChange = (r, c, value) => {
-    // prevent editing clues
-    if (PUZZLE[r][c] !== 0) return;
-
-    // allow only 1-4 or empty
+    if (PUZZLE[r][c] !== 0 || isSubmitting) return;
     const n = parseInt(value, 10);
     const newGrid = grid.map((row) => [...row]);
     newGrid[r][c] = !isNaN(n) && n >= 1 && n <= 4 ? n : 0;
     setGrid(newGrid);
+    setFeedback(null);
   };
 
   const checkSolution = () => {
-    // simple deep-equality check with solution
     const ok = SOLUTION.every((row, r) =>
       row.every((val, c) => grid[r][c] === val)
     );
 
     if (ok) {
-      setMessage("✅ Correct! Moving to next stage...");
+      setIsSubmitting(true);
+      setFeedback({ type: 'success', text: 'SEQUENCE_VERIFIED' });
       setTimeout(() => {
-        if (typeof onComplete === "function") onComplete();
-      }, 900);
+        onComplete('SUDOKU_4X4_BYPASS');
+      }, 1500);
     } else {
-      setMessage("❌ Not quite—double-check rows, columns, and 2×2 boxes.");
+      setFeedback({ type: 'error', text: 'PARITY_ERROR_DETECTED' });
     }
   };
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-gray-900 text-white p-6">
-      <h2 className="text-2xl font-bold mb-4">Sudoku 4x4</h2>
+    <div className="h-full flex flex-col items-center justify-center font-mono">
+      <div className="mb-12 text-center">
+        <p className="text-sm opacity-50 uppercase tracking-widest mb-1">Matrix_Alignment</p>
+        <h2 className="text-4xl font-black italic uppercase">Logic_Array_v2</h2>
+      </div>
 
-      <div
-        className="grid"
-        style={{
-          gridTemplateColumns: "repeat(4, 56px)",
-          gap: "6px",
-          background: "#111827",
-          padding: 12,
-          borderRadius: 8,
-        }}
-      >
+      <div className="grid grid-cols-4 gap-2 bg-white/10 p-4 border-2 border-white">
         {grid.map((row, r) =>
           row.map((cell, c) => {
             const isClue = PUZZLE[r][c] !== 0;
-            // border styles to emphasize 2x2 boxes
-            const style = {
-              width: 56,
-              height: 56,
-              textAlign: "center",
-              fontSize: 20,
-              fontWeight: 700,
-              border: "1px solid #374151",
-              background: isClue ? "#fcd34d" : "#ffffff",
-              color: isClue ? "#000" : "#000",
-              outline: "none",
-              boxSizing: "border-box",
-              // thicker borders for 2x2 boxes
-              borderTop: r % 2 === 0 ? "3px solid #000" : "1px solid #374151",
-              borderLeft: c % 2 === 0 ? "3px solid #000" : "1px solid #374151",
-              borderRight:
-                c === 3 ? "3px solid #000" : undefined,
-              borderBottom:
-                r === 3 ? "3px solid #000" : undefined,
-            };
-
             return (
-              <input
+              <motion.input
                 key={`${r}-${c}`}
                 value={cell === 0 ? "" : cell}
                 onChange={(e) => handleChange(r, c, e.target.value)}
                 maxLength={1}
-                disabled={isClue}
-                style={style}
+                disabled={isClue || isSubmitting}
+                className={`w-16 h-16 text-center text-3xl font-black border-2 transition-all ${
+                  isClue 
+                    ? 'bg-white text-black border-white' 
+                    : 'bg-transparent border-white/30 focus:border-white text-white focus:bg-white/10'
+                }`}
                 inputMode="numeric"
-                aria-label={`row ${r + 1} column ${c + 1}`}
+                whileFocus={{ scale: 1.05 }}
               />
             );
           })
         )}
       </div>
 
-      <div className="mt-4 flex gap-3">
+      <div className="mt-12 flex gap-4 w-full max-w-xs">
         <button
           onClick={checkSolution}
-          className="px-4 py-2 bg-yellow-400 text-black font-bold rounded"
+          disabled={isSubmitting}
+          className="flex-1 border-2 border-white py-3 font-black text-xl hover:bg-white hover:text-black transition-colors disabled:opacity-30"
         >
-          Check Solution
+          {isSubmitting ? 'SYNC...' : 'VALIDATE'}
         </button>
-
         <button
-          onClick={() => {
-            setGrid(PUZZLE.map((r) => [...r]));
-            setMessage("");
-          }}
-          className="px-4 py-2 bg-gray-700 text-white rounded border border-gray-600"
+          onClick={() => { setGrid(PUZZLE.map((r) => [...r])); setFeedback(null); }}
+          disabled={isSubmitting}
+          className="px-6 border-2 border-white/30 py-3 font-black text-xl hover:border-white transition-colors disabled:opacity-30"
         >
-          Reset
+          RESET
         </button>
       </div>
 
-      {message && <p className="mt-3">{message}</p>}
-
+      <AnimatePresence>
+        {feedback && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0 }}
+            className={`mt-8 px-8 py-3 border-l-8 font-black text-xl ${
+              feedback.type === 'success' ? 'border-green-500 text-green-500 bg-green-500/10' : 'border-red-500 text-red-500 bg-red-500/10'
+            }`}
+          >
+            {feedback.text}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

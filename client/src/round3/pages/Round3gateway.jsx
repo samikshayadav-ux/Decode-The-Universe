@@ -40,7 +40,7 @@ const FinalRoundGateway = () => {
 
   const handleEnter = () => {
     if (isLive && hasAccess) {
-      navigate('/round3/game');
+      navigate('/final-round/game');
     }
   };
 
