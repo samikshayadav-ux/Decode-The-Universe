@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../../auth/AuthContext';
 import { callGateway, submitAnswer, completeRound } from '../../utils/quizApi';
@@ -7,371 +7,193 @@ import { useNavigate } from 'react-router-dom';
 const QuizRound1 = () => {
   const { authData, isLoading: authLoading, isLoggedIn, refreshTeamProgress } = useAuth();
   const teamId = authData?.teamId;
-  const teamName = authData?.teamName;
   const navigate = useNavigate();
 
   const [questions, setQuestions] = useState([]);
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [answers, setAnswers] = useState([]);
-  const [score, setScore] = useState(0);
-  const [timeLeft, setTimeLeft] = useState(1500); // 25 minutes
+  const [timeLeft, setTimeLeft] = useState(1500);
   const [selectedOption, setSelectedOption] = useState(null);
   const [quizState, setQuizState] = useState('loading');
-  const [lastAnswerStart, setLastAnswerStart] = useState(null);
-  const [quizStartTime, setQuizStartTime] = useState(null);
-  const [error, setError] = useState(null);
-  const [feedback, setFeedback] = useState(null); // { isCorrect: boolean, correctAnswer: string }
+  const [lastStart, setLastStart] = useState(null);
+  const [startTime, setStartTime] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [showCompletionModal, setShowCompletionModal] = useState(false);
 
-  const TOTAL_TIME = 1500;
-
-  // Format time as MM:SS
-  const formatTime = (seconds) => {
-    const mins = Math.floor(Math.max(0, seconds) / 60);
-    const secs = Math.max(0, seconds) % 60;
-    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  const formatTime = (s) => {
+    const m = Math.floor(s / 60);
+    const sec = s % 60;
+    return `${m.toString().padStart(2, '0')}:${sec.toString().padStart(2, '0')}`;
   };
 
-  // Initialize Quiz
   useEffect(() => {
-    const initializeQuiz = async () => {
+    const init = async () => {
+      if (authLoading) return;
+      if (!isLoggedIn || !teamId) return setQuizState('error');
       try {
-        if (authLoading) return;
-        if (!isLoggedIn || !teamId) {
-          setError('Authentication required. Please log in.');
-          setQuizState('error');
-          return;
-        }
-
-        const gatewayData = await callGateway(1);
-        const { questions: questionsData, progress } = gatewayData;
-
-        if (!questionsData || questionsData.length === 0) {
-          setError('No questions found for this round.');
-          setQuizState('error');
-          return;
-        }
-
-        setQuestions(questionsData);
-        setAnswers(progress.answers || []);
-        setScore(progress.score || 0);
-        setCurrentIndex(progress.currentQuestion || 0);
-        
-        // Persisted time logic
-        const persistedTime = sessionStorage.getItem(`quizTimeLeft_r1_${teamId}`);
-        if (persistedTime) {
-          setTimeLeft(parseInt(persistedTime));
-        } else {
-          setTimeLeft(progress.timeLeft || TOTAL_TIME);
-        }
-
-        if (progress.status === 'completed') {
-          setQuizState('results');
-        } else {
-          setQuizState('active');
-          setLastAnswerStart(Date.now());
-          setQuizStartTime(Date.now());
-        }
-      } catch (err) {
-        console.error('Failed to initialize quiz:', err);
-        setError(err.message || 'Failed to load quiz data.');
-        setQuizState('error');
-      }
+        const { questions: q, progress: p } = await callGateway(1);
+        setQuestions(q);
+        setCurrentIndex(p.currentQuestion || 0);
+        setTimeLeft(p.timeLeft || 1500);
+        setQuizState(p.status === 'completed' ? 'results' : 'active');
+        setLastStart(Date.now());
+        setStartTime(Date.now());
+      } catch (e) { setQuizState('error'); }
     };
-
-    if (!authLoading) initializeQuiz();
+    init();
   }, [authLoading, isLoggedIn, teamId]);
 
-  // Timer logic
   useEffect(() => {
     if (quizState !== 'active') return;
-
-    const timer = setInterval(() => {
-      setTimeLeft((prev) => {
-        const next = prev - 1;
-        sessionStorage.setItem(`quizTimeLeft_r1_${teamId}`, next.toString());
-        
-        if (next <= 0) {
-          clearInterval(timer);
-          handleQuizCompletion(true);
-          return 0;
-        }
-        return next;
+    const t = setInterval(() => {
+      setTimeLeft(p => {
+        if (p <= 1) { clearInterval(t); finish(true); return 0; }
+        return p - 1;
       });
     }, 1000);
+    return () => clearInterval(t);
+  }, [quizState]);
 
-    return () => clearInterval(timer);
-  }, [quizState, teamId]);
-
-  const handleOptionSelect = (option) => {
-    if (feedback || isSubmitting) return;
-    setSelectedOption(option);
-  };
-
-  const handleAnswerSubmit = async () => {
-    if (!selectedOption || feedback || isSubmitting) return;
-
+  const submit = async () => {
+    if (!selectedOption || isSubmitting) return;
     setIsSubmitting(true);
-    const answerTime = Math.max(1, Math.floor((Date.now() - lastAnswerStart) / 1000));
-    const currentQuestion = questions[currentIndex];
-
     try {
-      const response = await submitAnswer(1, teamId, {
-        questionId: currentQuestion.id,
+      await submitAnswer(1, teamId, {
+        questionId: questions[currentIndex].id,
         answer: selectedOption,
-        timeTaken: answerTime,
+        timeTaken: Math.max(1, Math.floor((Date.now() - lastStart) / 1000)),
         timeLeft
       });
-
-      const { isCorrect, correctAnswer, updatedProgress } = response.data;
-      
-      // Set feedback for brutalist UI
-      setFeedback({ isCorrect, correctAnswer });
-      
-      // Update score with animation
-      if (isCorrect) {
-        setScore(updatedProgress.score);
-      }
-
-      // Wait a bit for the user to see feedback
-      setTimeout(async () => {
-        setFeedback(null);
+      if (currentIndex === questions.length - 1) {
+        finish(false);
+      } else {
+        setCurrentIndex(v => v + 1);
         setSelectedOption(null);
+        setLastStart(Date.now());
         setIsSubmitting(false);
-
-        if (currentIndex === questions.length - 1) {
-          handleQuizCompletion(false);
-        } else {
-          setCurrentIndex(prev => prev + 1);
-          setLastAnswerStart(Date.now());
-        }
-      }, 2000);
-
-    } catch (err) {
-      console.error('Answer submission failed:', err);
-      setError('Failed to submit answer. Please try again.');
-      setIsSubmitting(false);
-    }
+      }
+    } catch (e) { setIsSubmitting(false); }
   };
 
-  const handleQuizCompletion = async (isAutoSubmit = false) => {
+  const finish = async (auto = false) => {
     setQuizState('submitting');
     try {
-      const totalTimeSpent = Math.floor((Date.now() - (quizStartTime || Date.now())) / 1000);
-      
       await completeRound(1, teamId, {
-        score,
-        answers,
-        timeLeft: isAutoSubmit ? 0 : timeLeft,
-        totalTime: isAutoSubmit ? TOTAL_TIME : totalTimeSpent,
-        completionType: isAutoSubmit ? 'auto_submit' : 'full_completion'
+        timeLeft: auto ? 0 : timeLeft,
+        totalTime: Math.floor((Date.now() - startTime) / 1000)
       });
-
-      sessionStorage.removeItem(`quizTimeLeft_r1_${teamId}`);
-      
-      // Refresh progress to unlock next round
       await refreshTeamProgress();
-      
       setQuizState('results');
-      setShowCompletionModal(true);
-    } catch (err) {
-      console.error('Completion failed:', err);
-      setError('Failed to finalize quiz results.');
-      setQuizState('error');
-    }
+    } catch (e) { setQuizState('error'); }
   };
 
-  if (quizState === 'loading') {
-    return (
-      <div className="min-h-screen bg-black text-white flex items-center justify-center font-mono">
-        <motion.div 
-          animate={{ opacity: [0.4, 1, 0.4] }} 
-          transition={{ duration: 1.5, repeat: Infinity }}
-          className="text-2xl"
-        >
-          INITIALIZING_ROUND_1...
-        </motion.div>
+  useEffect(() => {
+    const handleKey = (e) => {
+      if (e.key === 'Enter' && selectedOption && !isSubmitting) submit();
+    };
+    window.addEventListener('keydown', handleKey);
+    return () => window.removeEventListener('keydown', handleKey);
+  }, [selectedOption, isSubmitting]);
+
+  if (quizState === 'loading') return <div className="min-h-screen bg-black flex items-center justify-center font-mono uppercase tracking-[0.5em] text-[10px] opacity-40">Initializing...</div>;
+  if (quizState === 'error') return <div className="min-h-screen bg-black flex items-center justify-center text-red-500 font-mono text-[10px] uppercase tracking-widest">System Error</div>;
+
+  if (quizState === 'results') return (
+    <div className="min-h-screen bg-black text-white flex flex-col items-center justify-center p-12 relative overflow-hidden">
+      <div className="absolute inset-0 starfield opacity-20" />
+      <div className="z-10 text-center space-y-12">
+        <h1 className="text-6xl font-black italic tracking-tighter uppercase">Phase 01 Complete</h1>
+        <button onClick={() => navigate('/round2')} className="neo-button">Proceed to Phase 02</button>
       </div>
-    );
-  }
+    </div>
+  );
 
-  if (quizState === 'error') {
-    return (
-      <div className="min-h-screen bg-black text-white flex items-center justify-center p-4 font-mono">
-        <div className="border-2 border-white p-8 max-w-md w-full">
-          <h2 className="text-2xl mb-4 text-red-500">SYSTEM_ERROR</h2>
-          <p className="mb-6">{error}</p>
-          <button 
-            onClick={() => window.location.reload()}
-            className="w-full border-2 border-white py-2 hover:bg-white hover:text-black transition-colors"
-          >
-            RETRY_BOOT
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  if (quizState === 'results') {
-    return (
-      <div className="min-h-screen bg-black text-white p-8 font-mono">
-        <div className="max-w-4xl mx-auto">
-          <header className="border-b-2 border-white pb-4 mb-8">
-            <h1 className="text-4xl font-black">ROUND_1_COMPLETE</h1>
-            <p className="text-xl">TEAM: {teamName?.toUpperCase()}</p>
-          </header>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12">
-            <div className="border-2 border-white p-6">
-              <p className="text-sm border-b border-white/30 mb-2">FINAL_SCORE</p>
-              <p className="text-5xl font-black">{score}/{questions.length}</p>
-            </div>
-            <div className="border-2 border-white p-6">
-              <p className="text-sm border-b border-white/30 mb-2">ACCURACY</p>
-              <p className="text-5xl font-black">{Math.round((score / questions.length) * 100)}%</p>
-            </div>
-            <div className="border-2 border-white p-6">
-              <p className="text-sm border-b border-white/30 mb-2">TIME_REMAINING</p>
-              <p className="text-5xl font-black">{formatTime(timeLeft)}</p>
-            </div>
-          </div>
-
-          <button 
-            onClick={() => navigate('/round2')}
-            className="border-2 border-white px-8 py-4 text-xl font-black hover:bg-white hover:text-black transition-colors"
-          >
-            PROCEED_TO_ROUND_2 →
-          </button>
-        </div>
-
-        {showCompletionModal && (
-          <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-50 p-4">
-            <motion.div 
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              className="border-4 border-white bg-black p-10 max-w-lg w-full text-center"
-            >
-              <h2 className="text-5xl font-black mb-4">ROUND COMPLETE!</h2>
-              <p className="text-xl mb-8">Data synchronized. Your team has unlocked Round 2.</p>
-              <button 
-                onClick={() => navigate('/round2')}
-                className="w-full border-2 border-white py-4 text-2xl font-black hover:bg-white hover:text-black transition-colors"
-              >
-                PROCEED TO ROUND 2
-              </button>
-            </motion.div>
-          </div>
-        )}
-      </div>
-    );
-  }
-
-  const currentQuestion = questions[currentIndex];
+  const q = questions[currentIndex];
 
   return (
-    <div className="min-h-screen bg-black text-white font-mono selection:bg-white selection:text-black">
-      {/* Fixed Timer Bar */}
-      <div className="fixed top-0 left-0 w-full h-12 bg-black border-b-2 border-white z-40 flex items-center">
-        <motion.div 
-          initial={{ width: '100%' }}
-          animate={{ width: `${(timeLeft / TOTAL_TIME) * 100}%` }}
-          className={`h-full ${timeLeft < 60 ? 'bg-red-600' : 'bg-white'}`}
-          transition={{ ease: "linear" }}
-        />
-        <div className="absolute inset-0 flex items-center justify-between px-6 pointer-events-none">
-          <span className="font-black mix-blend-difference">TIME_REMAINING: {formatTime(timeLeft)}</span>
-          <span className="font-black mix-blend-difference">PHASE_1 // TRANSMISSION</span>
+    <div className="min-h-screen bg-black text-white font-sans flex flex-col relative overflow-hidden">
+      <div className="absolute inset-0 starfield opacity-10" />
+      
+      {/* Top Navigation / Progress */}
+      <div className="z-20 border-b border-white/10 backdrop-blur-md">
+        <div className="flex justify-between items-center p-6 md:px-12">
+          <div className="text-[10px] font-black uppercase tracking-[0.4em] opacity-40">Phase_01 // Quiz_Node</div>
+          <div className="flex items-center gap-6">
+             <div className="text-[10px] font-mono font-black tracking-widest text-accent tabular-nums bg-white/5 px-4 py-1 rounded-full border border-white/5">
+                TIME_REMAINING: {formatTime(timeLeft)}
+             </div>
+          </div>
+        </div>
+        {/* Progress Bar */}
+        <div className="h-1 w-full bg-white/5 relative overflow-hidden">
+          <motion.div 
+            initial={{ width: 0 }}
+            animate={{ width: `${((currentIndex + 1) / questions.length) * 100}%` }}
+            className="h-full bg-accent"
+          />
         </div>
       </div>
 
-      <main className="pt-24 pb-12 px-6 max-w-7xl mx-auto">
-        <div className="flex justify-between items-end mb-8">
-          <div>
-            <h1 className="text-6xl font-black italic uppercase leading-none">Decode</h1>
-            <p className="text-xl opacity-70">QUESTION_{currentIndex + 1}_OF_{questions.length}</p>
-          </div>
-          <div className="text-right">
-            <p className="text-sm opacity-50 mb-1 tracking-tighter">LIVE_SCORE</p>
-            <motion.div 
-              key={score}
-              initial={{ scale: 1.5, color: '#fff' }}
-              animate={{ scale: 1, color: '#fff' }}
-              className="text-6xl font-black leading-none"
-            >
-              {score.toString().padStart(2, '0')}
-            </motion.div>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
-          {/* Question Column */}
-          <div className="border-2 border-white p-8 relative overflow-hidden">
-            <div className="absolute top-0 right-0 bg-white text-black px-4 py-1 font-black">
-              #{currentIndex + 1}
+      <main className="flex-1 flex flex-col items-center justify-center z-10 p-6 md:p-12">
+        <div className="w-full max-w-3xl space-y-12">
+          
+          {/* Tech Question Container */}
+          <div className="space-y-6">
+            <div className="flex items-center gap-4 opacity-20">
+              <div className="text-[8px] font-black uppercase tracking-widest">QUERY_BUFFER_{ (currentIndex+1).toString().padStart(2, '0') }</div>
+              <div className="h-px flex-1 bg-white/40" />
+              <div className="text-[8px] font-black uppercase tracking-widest">SEQ_TRANS_{ (currentIndex+1)*234 }</div>
             </div>
-            <div className="mb-8 opacity-30 text-xs">COMMUNICATION_INBOUND_ENCRYPTED</div>
-            <h2 className="text-3xl font-black leading-tight mb-12">
-              {currentQuestion?.question}
-            </h2>
+
+            <div className="minimal-box p-8 md:p-12 border-white/20 bg-white/[0.02]">
+              <h2 className="text-xl md:text-2xl font-bold tracking-tight leading-relaxed text-center">
+                {q?.question}
+              </h2>
+            </div>
             
-            {/* Inline Feedback */}
-            <AnimatePresence>
-              {feedback && (
-                <motion.div
-                  initial={{ x: -20, opacity: 0 }}
-                  animate={{ x: 0, opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  className={`border-l-8 p-4 bg-white/5 ${feedback.isCorrect ? 'border-green-500' : 'border-red-500'}`}
-                >
-                  <p className={`text-2xl font-black ${feedback.isCorrect ? 'text-green-500' : 'text-red-500'}`}>
-                    {feedback.isCorrect ? '✓ CORRECT' : `✗ INCORRECT`}
-                  </p>
-                  {!feedback.isCorrect && (
-                    <p className="mt-2 text-sm">THE CORRECT KEY WAS: <span className="bg-white text-black px-2">{feedback.correctAnswer}</span></p>
-                  )}
-                </motion.div>
-              )}
-            </AnimatePresence>
+            <div className="flex justify-between px-2">
+               <div className="text-[8px] font-black uppercase tracking-widest opacity-20">EST_ACCURACY: 98.4%</div>
+               <div className="text-[8px] font-black uppercase tracking-widest opacity-20">PKT_LOSS: 0.00%</div>
+            </div>
           </div>
 
-          {/* Answer Column */}
-          <div className="space-y-4">
-            {currentQuestion?.options.map((option, idx) => (
-              <motion.button
-                key={idx}
-                onClick={() => handleOptionSelect(option)}
-                disabled={feedback || isSubmitting}
-                className={`w-full text-left p-6 border-2 border-white text-xl font-black transition-all relative group overflow-hidden ${
-                  selectedOption === option ? 'bg-white text-black' : 'hover:bg-white hover:text-black'
-                } ${feedback || isSubmitting ? 'cursor-not-allowed opacity-50' : ''}`}
-                whileHover={{ x: feedback ? 0 : 10 }}
-                whileTap={{ scale: feedback ? 1 : 0.98 }}
+          {/* Options Vertical */}
+          <div className="flex flex-col gap-2">
+            {q?.options.map((opt, i) => (
+              <button
+                key={i}
+                onClick={() => setSelectedOption(opt)}
+                className={`text-left px-8 py-5 border border-white/5 text-xs font-black uppercase tracking-widest transition-all ${
+                  selectedOption === opt 
+                    ? 'bg-white text-black border-white' 
+                    : 'bg-white/[0.02] hover:bg-white/5 opacity-50 hover:opacity-100'
+                }`}
               >
-                <div className="flex items-center justify-between relative z-10">
-                  <span>{option}</span>
-                  <span className="opacity-0 group-hover:opacity-100 transition-opacity">→</span>
+                <div className="flex justify-between items-center">
+                   <span>{opt}</span>
+                   {selectedOption === opt && <div className="w-1.5 h-1.5 rounded-full bg-black" />}
                 </div>
-              </motion.button>
+              </button>
             ))}
+          </div>
 
+          {/* Submit Action */}
+          <div className="flex flex-col items-center gap-4 pt-4">
             <button
-              onClick={handleAnswerSubmit}
-              disabled={!selectedOption || feedback || isSubmitting}
-              className={`w-full border-4 border-white py-6 text-3xl font-black mt-8 transition-colors ${
-                selectedOption && !feedback && !isSubmitting 
-                  ? 'bg-white text-black hover:bg-black hover:text-white' 
-                  : 'opacity-20 cursor-not-allowed'
-              }`}
+              onClick={submit}
+              disabled={!selectedOption || isSubmitting}
+              className={`neo-button w-full md:w-80 ${(!selectedOption || isSubmitting) ? 'opacity-20 grayscale' : ''}`}
             >
-              {isSubmitting ? 'PROCESSING...' : 'SUBMIT_KEY'}
+              {isSubmitting ? 'SYNCING...' : 'CONFIRM_SELECTION'}
             </button>
+            <div className="text-[7px] font-black uppercase tracking-[0.3em] opacity-20">Press [Enter] to transmit data</div>
           </div>
         </div>
       </main>
 
-      {/* Decorative Scanlines */}
-      <div className="fixed inset-0 pointer-events-none opacity-[0.03] z-50 bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.25)_50%),linear-gradient(90deg,rgba(255,0,0,0.06),rgba(0,255,0,0.02),rgba(0,0,255,0.06))] bg-[length:100%_4px,3px_100%]" />
+      {/* Background Decor */}
+      <div className="absolute top-1/2 left-8 -translate-y-1/2 flex flex-col gap-8 opacity-5">
+         <div className="text-[8px] font-black vertical-text uppercase tracking-widest">INTERSTELLAR_COMM</div>
+         <div className="w-px h-24 bg-white/40 mx-auto" />
+      </div>
     </div>
   );
 };
