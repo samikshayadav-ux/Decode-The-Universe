@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Eye, EyeOff } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { motion } from 'framer-motion';
+import { Shield, ArrowRight, AlertCircle, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from './AuthContext';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
@@ -10,13 +11,11 @@ const Login = () => {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   
   const navigate = useNavigate();
   const { login, isLoggedIn } = useAuth();
 
-  // Redirect if already logged in
   useEffect(() => {
     if (isLoggedIn) {
       navigate('/', { replace: true });
@@ -26,7 +25,6 @@ const Login = () => {
   const handleLogin = async (e) => {
     e.preventDefault();
     setError('');
-    setSuccess('');
     setIsLoading(true);
 
     try {
@@ -39,10 +37,9 @@ const Login = () => {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.message || 'Login failed');
+        throw new Error(data.message || 'AUTHENTICATION_FAILED');
       }
 
-      // Store team info and token
       login({
         teamId: data.team.teamId,
         teamName: data.team.teamName,
@@ -50,90 +47,138 @@ const Login = () => {
         unlockedRounds: data.team.unlockedRounds
       }, data.token);
 
-      setSuccess('Login successful!');
-      
-      setTimeout(() => {
-        navigate('/', { replace: true });
-      }, 500);
-
+      navigate('/', { replace: true });
     } catch (err) {
-      console.error('Login error:', err);
-      setError(err.message || 'Login failed');
+      setError(err.message || 'SERVER_ERROR');
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <div className="w-full max-w-md mx-auto">
-      <div className="text-center mb-6">
-        <h2 className="text-2xl font-mono text-white mb-2">LOGIN</h2>
-        <div className="text-gray-400 font-mono text-sm">Enter your credentials</div>
+    <div className="min-h-screen bg-black flex flex-col md:flex-row font-mono overflow-hidden">
+      {/* Left Branding Panel */}
+      <div className="w-full md:w-1/2 bg-black border-r-2 border-white/10 p-12 flex flex-col justify-between relative overflow-hidden">
+        <div className="grid-bg absolute inset-0 opacity-10" />
+        <div className="scanline" />
+        
+        <div className="z-10">
+          <motion.div 
+            initial={{ x: -20, opacity: 0 }}
+            animate={{ x: 0, opacity: 1 }}
+            className="flex items-center gap-2 text-accent font-black tracking-widest text-lg mb-12"
+          >
+            <Shield size={24} />
+            <span>TERMINAL_LOGIN</span>
+          </motion.div>
+
+          <motion.h1 
+            initial={{ y: 20, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ delay: 0.2 }}
+            className="text-6xl md:text-8xl font-black tracking-tighter leading-[0.8] uppercase"
+          >
+            ENTER <br />
+            THE <br />
+            <span className="text-accent underline decoration-white/20">VOID</span>
+          </motion.h1>
+        </div>
+
+        <motion.div 
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 0.4 }}
+          transition={{ delay: 0.6 }}
+          className="z-10 text-xs tracking-[0.4em] uppercase"
+        >
+          [ DECODE_THE_UNIVERSE // 2026 ]
+        </motion.div>
       </div>
 
-      <form onSubmit={handleLogin} className="space-y-4">
-        {error && (
-          <div className="p-3 bg-red-900/30 border border-red-700 text-red-400 rounded-lg text-sm font-mono">
-            {error}
-          </div>
-        )}
-
-        {success && (
-          <div className="p-3 bg-green-900/20 border border-green-700 text-green-400 rounded-lg text-sm font-mono">
-            {success}
-          </div>
-        )}
-
-        <div>
-          <label className="block text-gray-400 font-mono text-xs mb-1">TEAM ID*</label>
-          <input
-            type="text"
-            value={teamId}
-            onChange={(e) => setTeamId(e.target.value)}
-            placeholder="Enter your Team ID"
-            className="w-full p-3 rounded-lg bg-black border border-gray-800 text-white font-mono placeholder-gray-600 focus:border-blue-500 focus:outline-none"
-            required
-            disabled={isLoading}
-          />
-        </div>
-
-        <div>
-          <label className="block text-gray-400 font-mono text-xs mb-1">PASSWORD*</label>
-          <div className="relative">
-            <input
-              type={showPassword ? 'text' : 'password'}
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="Enter your password"
-              className="w-full p-3 pr-10 rounded-lg bg-black border border-gray-800 text-white font-mono placeholder-gray-600 focus:border-blue-500 focus:outline-none"
-              required
-              disabled={isLoading}
-            />
-            <button
-              type="button"
-              onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-white disabled:opacity-50"
-              disabled={isLoading}
-            >
-              {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
-            </button>
-          </div>
-        </div>
-
-        <button
-          type="submit"
-          disabled={isLoading}
-          className={`w-full py-3 rounded-lg border font-mono transition-colors ${
-            isLoading
-              ? 'border-gray-600 text-gray-500 cursor-not-allowed'
-              : 'border-blue-500 text-blue-500 hover:bg-blue-500/10 active:bg-blue-500/20'
-          }`}
+      {/* Right Login Panel */}
+      <div className="w-full md:w-1/2 bg-white text-black p-8 md:p-24 flex flex-col justify-center relative">
+        <motion.div 
+          initial={{ x: 50, opacity: 0 }}
+          animate={{ x: 0, opacity: 1 }}
+          transition={{ delay: 0.4 }}
+          className={`
+            border-l-4 transition-colors duration-300 p-8
+            ${error ? 'border-red-500' : 'border-black'}
+          `}
         >
-          {isLoading ? 'AUTHENTICATING...' : 'LOGIN'}
-        </button>
-      </form>
+          <h2 className="text-4xl font-black uppercase tracking-tighter mb-8 italic">IDENTITY_CHECK</h2>
+          
+          <form onSubmit={handleLogin} className="space-y-12">
+            <div className="space-y-2">
+              <label className="text-xs font-black tracking-widest text-gray-500 uppercase">TEAM ID</label>
+              <input
+                type="text"
+                autoFocus
+                value={teamId}
+                onChange={(e) => setTeamId(e.target.value)}
+                placeholder="EXP-XXXX"
+                className="w-full text-2xl font-black bg-transparent border-b-2 border-black py-2 focus:outline-none placeholder-gray-200 uppercase"
+                required
+                disabled={isLoading}
+              />
+            </div>
+
+            <div className="space-y-2 relative">
+              <label className="text-xs font-black tracking-widest text-gray-500 uppercase">ACCESS_KEY</label>
+              <input
+                type={showPassword ? 'text' : 'password'}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="********"
+                className="w-full text-2xl font-black bg-transparent border-b-2 border-black py-2 focus:outline-none placeholder-gray-200"
+                required
+                disabled={isLoading}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-0 bottom-2 text-black/50 hover:text-black transition-colors"
+                disabled={isLoading}
+              >
+                {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+              </button>
+            </div>
+
+            {error && (
+              <motion.div 
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                className="flex items-center gap-2 text-red-500 font-black text-sm bg-red-50 p-4 border border-red-200"
+              >
+                <AlertCircle size={16} />
+                <span>ERROR: {error}</span>
+              </motion.div>
+            )}
+
+            <button
+              type="submit"
+              disabled={isLoading}
+              className={`
+                w-full group relative overflow-hidden py-6 border-2 border-black font-black text-xl uppercase tracking-tighter transition-all duration-150
+                ${isLoading 
+                  ? 'bg-gray-100 text-gray-400 cursor-wait' 
+                  : 'bg-black text-white hover:bg-white hover:text-black'}
+              `}
+            >
+              <span className="relative z-10 flex items-center justify-center gap-4">
+                {isLoading ? 'VERIFYING...' : 'INITIALIZE'}
+                {!isLoading && <ArrowRight className="group-hover:translate-x-2 transition-transform" size={24} />}
+              </span>
+            </button>
+          </form>
+
+          <p className="mt-12 text-[10px] text-gray-400 font-bold uppercase tracking-widest leading-relaxed">
+            NOTICE: UNAUTHORIZED ACCESS ATTEMPTS ARE LOGGED. <br />
+            ENSURE YOUR TEAM COORDINATOR HAS ALLOCATED YOUR CREDENTIALS.
+          </p>
+        </motion.div>
+      </div>
     </div>
   );
 };
 
-export default Login;
+export default Login;

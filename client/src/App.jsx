@@ -20,13 +20,13 @@ import AdminDashboard from './admin/AdminDashboard';
 import ProtectedRoute from './components/ProtectedRoute';
 
 // Round Components
-import Round0Gateway from './round0/pages/round0gateway';
+import Round1Gateway from './round0/pages/round0gateway';
 import Quizround0 from './round0/pages/Quizround0';
 
 import Round2Gateway from './round2/pages/Round2gateway';
 import TreasureHuntRound2 from './round2/pages/TreasureHuntRound2';
 
-import Round3Gateway from './round3/pages/Round3gateway';
+import FinalRoundGateway from './round3/pages/Round3gateway';
 import TreasureHuntRound3 from './round3/pages/TreasureHuntRound3';
 
 import PrivateRoute from './components/PrivateRoute';
@@ -63,7 +63,7 @@ const App = () => {
           />
 
           {/* Round 1 (Was Round 0) */}
-          <Route path="/round1" element={<Round0Gateway />} />
+          <Route path="/round1" element={<Round1Gateway />} />
           <Route
             path="/round1/game"
             element={
@@ -85,7 +85,7 @@ const App = () => {
           />
 
           {/* Final Round (Was Round 3) */}
-          <Route path="/final-round" element={<Round3Gateway />} />
+          <Route path="/final-round" element={<FinalRoundGateway />} />
           <Route
             path="/final-round/game"
             element={
