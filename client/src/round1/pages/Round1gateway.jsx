@@ -1,41 +1,29 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Lock, Eye, EyeOff, ShieldCheck, Terminal, ArrowLeft } from 'lucide-react';
+import { ShieldCheck, Terminal, ArrowLeft, ArrowRight, Activity } from 'lucide-react';
 import { useAuth } from '../../auth/AuthContext';
 
 const Round1Gateway = () => {
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
-  
   const navigate = useNavigate();
   const { isLoggedIn, authData } = useAuth();
-
-  const correctPassword = 'KLE&3h9jd';
+  const isUnlocked = authData?.unlockedRounds?.includes(1);
 
   useEffect(() => {
-    if (isLoggedIn && authData) {
-      if (authData.unlockedRounds?.includes(1)) {
-        navigate('/round1/game', { replace: true });
-      }
+    // If already logged in and unlocked, maybe just go straight?
+    // User said: "from round 2-3 directly open if logged in"
+    // For Round 1: "ask me to register/login"
+    if (isLoggedIn && isUnlocked) {
+      // navigate('/round1/game', { replace: true });
     }
-  }, [isLoggedIn, authData, navigate]);
+  }, [isLoggedIn, isUnlocked, navigate]);
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    setIsLoading(true);
-    setError('');
-
-    setTimeout(() => {
-      if (password.trim() === correctPassword) {
-        navigate('/auth', { state: { from: { pathname: '/round1' } } });
-      } else {
-        setError('INVALID_KEY_SEQUENCE');
-        setIsLoading(false);
-      }
-    }, 800);
+  const handleProceed = () => {
+    if (!isLoggedIn) {
+      navigate('/auth', { state: { from: { pathname: '/round1/game' } } });
+    } else {
+      navigate('/round1/game');
+    }
   };
 
   return (
@@ -51,10 +39,13 @@ const Round1Gateway = () => {
           <span>BACK_TO_HOME</span>
         </button>
         
-        <div className="text-right">
-          <div className="text-[10px] text-white/40 font-bold uppercase tracking-widest">AUTHORIZED_TERMINAL</div>
-          <div className="text-accent font-black uppercase tracking-tighter text-xs md:text-base">
-            {authData?.teamName || 'GUEST_UNAFFILIATED'}
+        <div className="flex items-center gap-2 bg-white/5 border border-white/10 px-3 py-1.5">
+          <Activity size={14} className={isLoggedIn ? 'text-green-500' : 'text-gray-500'} />
+          <div className="text-right">
+            <div className="text-[8px] text-white/40 font-bold uppercase tracking-widest leading-none">TERMINAL_STATUS</div>
+            <div className="text-accent font-black uppercase tracking-tighter text-[10px]">
+              {authData?.teamName || 'GUEST_UNAFFILIATED'}
+            </div>
           </div>
         </div>
       </div>
@@ -71,64 +62,30 @@ const Round1Gateway = () => {
 
           <div className="mb-12">
             <h1 className="text-5xl font-black tracking-tighter uppercase italic mb-2">ROUND 1</h1>
-            <div className="flex items-center gap-2 text-white/40 text-[10px] font-bold tracking-[0.3em]">
+            <div className="flex items-center gap-2 text-accent text-[10px] font-black tracking-[0.3em]">
               <ShieldCheck size={12} />
-              <span>ENTRY_RESTRICTED // KEYS_REQUIRED</span>
+              <span>ACCESS_PROTOCOL: {isUnlocked ? 'AUTHORIZED' : 'PENDING_AUTH'}</span>
             </div>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-8">
-            <div className="space-y-4">
-              <label className="text-[10px] font-black tracking-widest uppercase opacity-50">INPUT ACCESS_KEY</label>
-              <div className="relative">
-                <input
-                  type={showPassword ? 'text' : 'password'}
-                  className="w-full bg-transparent border-b-4 border-white py-4 px-2 text-2xl font-black focus:outline-none placeholder-white/5 uppercase"
-                  placeholder="********"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  disabled={isLoading}
-                  autoFocus
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 text-white/30 hover:text-white"
-                  disabled={isLoading}
-                >
-                  {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
-                </button>
-              </div>
-              {error && (
-                <p className="text-red-500 text-[10px] font-black uppercase mt-2">
-                  [!] ERROR: {error}
-                </p>
-              )}
-            </div>
+          <div className="space-y-6">
+            <p className="text-xs text-white/60 leading-relaxed">
+              WELCOME TO THE FIRST SEQUENCE. YOUR TEAM IDENTITY MUST BE VERIFIED BEFORE PROCEEDING TO THE CORE SYSTEM.
+            </p>
 
             <button
-              type="submit"
-              disabled={isLoading || !password.trim()}
-              className={`
-                w-full border-4 py-6 flex items-center justify-center gap-4 text-xl font-black uppercase tracking-tighter transition-all duration-150
-                ${isLoading || !password.trim()
-                  ? 'border-white/10 text-white/10 cursor-not-allowed'
-                  : 'border-white bg-white text-black hover:bg-black hover:text-white'}
-              `}
+              onClick={handleProceed}
+              className="w-full border-4 border-white bg-white text-black py-6 flex items-center justify-center gap-4 text-xl font-black uppercase tracking-tighter hover:bg-black hover:text-white transition-all duration-150"
             >
-              {isLoading ? 'VERIFY_SEQUENCE...' : (
-                <>
-                  <span>INITIALIZE</span>
-                  <Lock size={20} />
-                </>
-              )}
+              <span>{isLoggedIn ? 'PROCEED TO GAME' : 'LOGIN / REGISTER'}</span>
+              <ArrowRight size={20} />
             </button>
-          </form>
+          </div>
         </motion.div>
 
         <p className="mt-12 text-white/20 text-[10px] font-bold uppercase tracking-widest text-center max-w-xs leading-loose">
-          WARNING: UNAUTHORIZED ATTEMPTS WILL TRIGGER SYSTEM_LOCKOUT. <br />
-          REFER TO COMMAND_BRIEF FOR AUTHENTICATION PROTOCOLS.
+          SIGNAL_STRENGTH: OPTIMAL <br />
+          DECODE_SEQUENCE_READY
         </p>
       </div>
 

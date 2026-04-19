@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Eye, EyeOff } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { UserPlus, Shield, AlertCircle, ArrowRight, CornerDownRight, Plus, X } from 'lucide-react';
 import { useAuth } from './AuthContext';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
@@ -10,227 +11,190 @@ const Register = () => {
     teamName: '',
     teamId: '',
     password: '',
-    members: ['', '', '', ''],
+    members: ['', '', '']
   });
 
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   const navigate = useNavigate();
   const location = useLocation();
-  const { login, isLoggedIn } = useAuth();
-  
-  // Get the intended destination (same logic as Login)
-  const getIntendedRound = () => {
-    // Check if user came from a specific round gateway
-    const fromPath = location.state?.from?.pathname;
-    if (fromPath) {
-      const pathSegments = fromPath.split('/').filter(Boolean);
-      const roundFromPath = pathSegments.find(segment => segment.startsWith('round'));
-      if (roundFromPath) return roundFromPath;
-    }
+  const { login } = useAuth();
+  const from = location.state?.from?.pathname || '/';
 
-    // Check current URL path
-    const currentPathSegments = location.pathname.split('/').filter(Boolean);
-    const roundFromCurrentPath = currentPathSegments.find(segment => segment.startsWith('round'));
-    if (roundFromCurrentPath) return roundFromCurrentPath;
-
-    // Check stored intended round
-    const storedIntendedRound = sessionStorage.getItem('intendedRound');
-    if (storedIntendedRound) return storedIntendedRound;
-
-    return 'round1'; // Default
-  };
-
-  // Redirect if already logged in
-  React.useEffect(() => {
-    if (isLoggedIn) {
-      const targetRound = getIntendedRound();
-      navigate(`/${targetRound}/game`, { replace: true });
-    }
-  }, [isLoggedIn, navigate]);
-
-  const handleChange = (e) => {
+  const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    setFormData(prev => ({ ...prev, [name]: value }));
   };
 
   const handleMemberChange = (index, value) => {
-    const updated = [...formData.members];
-    updated[index] = value;
-    setFormData((prev) => ({ ...prev, members: updated }));
+    const newMembers = [...formData.members];
+    newMembers[index] = value;
+    setFormData(prev => ({ ...prev, members: newMembers }));
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setError('');
-    setSuccess('');
-    setLoading(true);
-
-    const intendedRound = getIntendedRound();
-    console.log('Registration attempt for intended round:', intendedRound);
-
-    try {
-      const { teamName, teamId, password, members } = formData;
-
-      // Call backend API for registration
-      const response = await fetch(`${API_URL}/api/auth/register`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          teamName: teamName,
-          teamId: teamId,
-          password: password,
-          members: members.filter(m => m.trim())
-        })
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || 'Registration failed');
-      }
-
-      const authData = {
-        teamId: data.team.teamId,
-        teamName: data.team.teamName,
-        isGuest: false,
-        currentRound: intendedRound,
-        completedRounds: []
-      };
-
-      login(authData, data.token, intendedRound);
-      setSuccess('Registration successful!');
-      
-      // Clear stored intended round
-      sessionStorage.removeItem('intendedRound');
-      
-      setTimeout(() => {
-        const gamePath = `/${intendedRound}/game`;
-        console.log('Register redirecting to:', gamePath);
-        navigate(gamePath, { replace: true });
-      }, 1000);
-      
-    } catch (err) {
-      console.error('Registration error:', err);
-      setError(err.message || 'Registration failed. Try again.');
-    } finally {
-      setLoading(false);
+  const addMember = () => {
+    if (formData.members.length < 4) {
+      setFormData(prev => ({ ...prev, members: [...prev.members, ''] }));
     }
   };
 
-  const togglePasswordVisibility = () => setShowPassword((prev) => !prev);
-  const currentDisplayRound = getIntendedRound();
+  const removeMember = (index) => {
+    if (formData.members.length > 3) {
+      const newMembers = formData.members.filter((_, i) => i !== index);
+      setFormData(prev => ({ ...prev, members: newMembers }));
+    }
+  };
+
+  const handleRegister = async (e) => {
+    e.preventDefault();
+    setIsLoading(true);
+    setError('');
+    setSuccess('');
+
+    try {
+      const response = await fetch(`${API_URL}/api/auth/register`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData)
+      });
+
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.message || 'REGISTRATION_FAILED');
+
+      setSuccess('REGISTRATION_SUCCESSFUL // REDIRECTING');
+      setTimeout(() => {
+        login(data.team, data.token);
+        navigate(from, { replace: true });
+      }, 1500);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return (
-    <div className="w-full max-w-md mx-auto">
-      <div className="text-center mb-6">
-        <h2 className="text-2xl font-mono text-white mb-2">
-            REGISTER
-        </h2>
-        <div className="text-gray-400 font-mono text-sm">
-          Register your team 
+    <div className="flex flex-col md:flex-row bg-bg">
+      {/* Branding Panel */}
+      <div className="w-full md:w-2/5 p-12 flex flex-col justify-between border-r-2 border-white/5 bg-surface/50">
+        <div>
+          <div className="flex items-center gap-2 text-accent text-[10px] font-black uppercase tracking-widest mb-8">
+            <UserPlus size={14} />
+            <span>DEPLOY_UNIT</span>
+          </div>
+          <h2 className="text-5xl font-black italic uppercase tracking-tighter leading-none mb-6">
+            CREATE<br /> NEW<br /> ENTITY_
+          </h2>
+          <p className="text-[10px] font-bold uppercase opacity-30 tracking-widest leading-relaxed">
+            Register your team on the decentralized grid to participate in the universal decryption sequence.
+          </p>
+        </div>
+        
+        <div className="text-[10px] flex items-center gap-2 opacity-20 font-mono">
+          <CornerDownRight size={12} />
+          <span>PORT_8081 // ENCRYPTED</span>
         </div>
       </div>
 
-      <form onSubmit={handleSubmit}>
-        {error && (
-          <div className="p-3 bg-red-900/30 border border-red-700 text-red-400 rounded-lg text-sm font-mono mb-4">
-            {error}
-          </div>
-        )}
-        {success && (
-          <div className="p-3 bg-green-900/30 border border-green-700 text-green-400 rounded-lg text-sm font-mono mb-4">
-            {success}
-          </div>
-        )}
+      {/* Form Panel */}
+      <div className="w-full md:w-3/5 p-12 bg-white text-black max-h-[70vh] overflow-y-auto custom-scrollbar">
+        <form onSubmit={handleRegister} className="space-y-8">
+          {error && (
+            <div className="flex items-center gap-3 p-4 bg-red-50 border-l-4 border-red-500 text-red-600 font-bold text-xs uppercase">
+              <AlertCircle size={16} />
+              <span>{error}</span>
+            </div>
+          )}
+          {success && (
+            <div className="flex items-center gap-3 p-4 bg-accent/10 border-l-4 border-accent text-accent-dim text-accent font-bold text-xs uppercase">
+              <Shield size={16} />
+              <span>{success}</span>
+            </div>
+          )}
 
-        {/* Team Name */}
-        <div className="mb-4">
-          <label className="block text-gray-400 font-mono text-xs mb-1">TEAM NAME*</label>
-          <input
-            name="teamName"
-            value={formData.teamName}
-            onChange={handleChange}
-            required
-            disabled={loading}
-            placeholder="Enter the team name"
-            className="w-full p-3 bg-black border border-gray-800 text-white font-mono placeholder-gray-600 focus:border-blue-500 focus:outline-none rounded"
-          />
-        </div>
-
-        {/* Team ID */}
-        <div className="mb-4">
-          <label className="block text-gray-400 font-mono text-xs mb-1">UNIQUE ID*</label>
-          <input
-            name="teamId"
-            value={formData.teamId}
-            onChange={handleChange}
-            required
-            disabled={loading}
-            placeholder="Enter the given Team ID"
-            className="w-full p-3 bg-black border border-gray-800 text-white font-mono placeholder-gray-600 focus:border-blue-500 focus:outline-none rounded"
-          />
-        </div>
-
-        {/* Members */}
-        <div className="mb-4">
-          <label className="block text-gray-400 font-mono text-xs mb-1">TEAM MEMBERS</label>
-          <div className="grid grid-cols-2 gap-4">
-            {formData.members.map((member, i) => (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div className="space-y-1">
+              <label className="text-[10px] font-black uppercase tracking-widest opacity-40 italic">TEAM_NAME</label>
               <input
-                key={i}
-                value={member}
-                onChange={(e) => handleMemberChange(i, e.target.value)}
-                placeholder={`MEMBER ${i + 1}${i < 3 ? '*' : ''}`}
-                required={i < 3}
-                disabled={loading}
-                className="w-full p-3 bg-black border border-gray-800 text-white font-mono placeholder-gray-600 focus:border-blue-500 focus:outline-none rounded"
+                name="teamName"
+                value={formData.teamName}
+                onChange={handleInputChange}
+                required
+                className="w-full bg-transparent border-b-2 border-black py-2 px-1 text-xl font-black uppercase focus:outline-none focus:border-accent transition-colors"
+                placeholder="NEBULAS"
               />
-            ))}
+            </div>
+            <div className="space-y-1">
+              <label className="text-[10px] font-black uppercase tracking-widest opacity-40 italic">TEAM_ID</label>
+              <input
+                name="teamId"
+                value={formData.teamId}
+                onChange={handleInputChange}
+                required
+                className="w-full bg-transparent border-b-2 border-black py-2 px-1 text-xl font-black uppercase focus:outline-none focus:border-accent transition-colors"
+                placeholder="ID-001"
+              />
+            </div>
           </div>
-        </div>
 
-        {/* Password */}
-        <div className="mb-6">
-          <label className="block text-gray-400 font-mono text-xs mb-1">PASSWORD*</label>
-          <div className="relative">
+          <div className="space-y-1">
+            <label className="text-[10px] font-black uppercase tracking-widest opacity-40 italic">ACCESS_KEY</label>
             <input
-              type={showPassword ? 'text' : 'password'}
+              type="password"
               name="password"
               value={formData.password}
-              onChange={handleChange}
+              onChange={handleInputChange}
               required
-              disabled={loading}
-              placeholder="Create a password"
-              className="w-full p-3 pr-10 bg-black border border-gray-800 text-white font-mono placeholder-gray-600 focus:border-blue-500 focus:outline-none rounded"
+              className="w-full bg-transparent border-b-2 border-black py-2 px-1 text-xl font-black focus:outline-none focus:border-accent transition-colors"
+              placeholder="••••••••"
             />
-            <span
-              onClick={togglePasswordVisibility}
-              className="absolute inset-y-0 right-3 flex items-center cursor-pointer text-gray-400 hover:text-white"
-            >
-              {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
-            </span>
           </div>
-        </div>
 
-        {/* Submit Button */}
-        <button
-          type="submit"
-          disabled={loading}
-          className={`w-full py-3 border font-mono transition-colors rounded ${
-            loading
-              ? 'border-gray-600 text-gray-500 cursor-not-allowed'
-              : 'border-blue-500 text-blue-500 hover:bg-blue-500/10 active:bg-blue-500/20'
-          }`}
-        >
-          {loading ? ' REGISTERING...' : ' REGISTER'}
-        </button>
-      </form>
+          <div className="space-y-4">
+            <div className="flex justify-between items-center">
+              <label className="text-[10px] font-black uppercase tracking-widest opacity-40 italic">CREW_MANIFEST (MIN 3)</label>
+              {formData.members.length < 4 && (
+                <button type="button" onClick={addMember} className="text-[10px] font-black flex items-center gap-1 hover:text-accent transition-colors">
+                  <Plus size={12} /> ADD
+                </button>
+              )}
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {formData.members.map((member, index) => (
+                <div key={index} className="relative group">
+                  <input
+                    value={member}
+                    onChange={(e) => handleMemberChange(index, e.target.value)}
+                    required
+                    className="w-full bg-transparent border-2 border-black/10 py-3 px-4 text-sm font-bold uppercase focus:outline-none focus:border-black transition-colors"
+                    placeholder={`MEMBER_0${index + 1}`}
+                  />
+                  {formData.members.length > 3 && (
+                    <button 
+                      type="button" 
+                      onClick={() => removeMember(index)}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-40 hover:!opacity-100 transition-opacity"
+                    >
+                      <X size={14} />
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <button
+            type="submit"
+            disabled={isLoading}
+            className="neo-button w-full py-6 flex items-center justify-center gap-4 text-xl tracking-tighter"
+          >
+            <span>{isLoading ? 'DEPLOYING...' : 'DEPLOY_UNIT'}</span>
+            <ArrowRight size={20} />
+          </button>
+        </form>
+      </div>
     </div>
   );
 };
