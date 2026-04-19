@@ -519,7 +519,7 @@ const AdminDashboard = () => {
             <p className="text-[10px] md:text-xs uppercase font-bold mb-2 flex items-center opacity-70 group-hover:opacity-100">
               <stat.icon size={14} className="mr-2" /> {stat.label}
             </p>
-            <p className="text-2xl md:text-3xl font-black tracking-tighter">{stat.value}</p>
+            <p className="text-xl md:text-2xl font-black tracking-tighter">{stat.value}</p>
           </div>
         ))}
       </motion.div>
