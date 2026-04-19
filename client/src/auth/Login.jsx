@@ -56,9 +56,9 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen bg-black flex flex-col md:flex-row font-mono overflow-hidden">
+    <div className="min-h-screen bg-black flex flex-col md:flex-row font-mono overflow-y-auto md:overflow-hidden">
       {/* Left Branding Panel */}
-      <div className="w-full md:w-1/2 bg-black border-r-2 border-white/10 p-12 flex flex-col justify-between relative overflow-hidden">
+      <div className="w-full md:w-1/2 bg-black border-b-2 md:border-b-0 md:border-r-2 border-white/10 p-8 md:p-12 flex flex-col justify-between relative overflow-hidden min-h-[300px] md:min-h-screen">
         <div className="grid-bg absolute inset-0 opacity-10" />
         <div className="scanline" />
         
@@ -66,9 +66,9 @@ const Login = () => {
           <motion.div 
             initial={{ x: -20, opacity: 0 }}
             animate={{ x: 0, opacity: 1 }}
-            className="flex items-center gap-2 text-accent font-black tracking-widest text-lg mb-12"
+            className="flex items-center gap-2 text-accent font-black tracking-widest text-base md:text-lg mb-8 md:mb-12"
           >
-            <Shield size={24} />
+            <Shield size={20} className="md:w-6 md:h-6" />
             <span>TERMINAL_LOGIN</span>
           </motion.div>
 
@@ -76,7 +76,7 @@ const Login = () => {
             initial={{ y: 20, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             transition={{ delay: 0.2 }}
-            className="text-6xl md:text-8xl font-black tracking-tighter leading-[0.8] uppercase"
+            className="text-5xl sm:text-6xl md:text-8xl font-black tracking-tighter leading-[0.8] uppercase"
           >
             ENTER <br />
             THE <br />
@@ -88,48 +88,48 @@ const Login = () => {
           initial={{ opacity: 0 }}
           animate={{ opacity: 0.4 }}
           transition={{ delay: 0.6 }}
-          className="z-10 text-xs tracking-[0.4em] uppercase"
+          className="z-10 text-[8px] md:text-xs tracking-[0.4em] uppercase mt-8 md:mt-0"
         >
           [ DECODE_THE_UNIVERSE // 2026 ]
         </motion.div>
       </div>
 
       {/* Right Login Panel */}
-      <div className="w-full md:w-1/2 bg-white text-black p-8 md:p-24 flex flex-col justify-center relative">
+      <div className="w-full md:w-1/2 bg-white text-black p-8 md:p-24 flex flex-col justify-center relative min-h-[500px] md:min-h-screen">
         <motion.div 
           initial={{ x: 50, opacity: 0 }}
           animate={{ x: 0, opacity: 1 }}
           transition={{ delay: 0.4 }}
           className={`
-            border-l-4 transition-colors duration-300 p-8
+            border-l-4 transition-colors duration-300 p-4 md:p-8
             ${error ? 'border-red-500' : 'border-black'}
           `}
         >
-          <h2 className="text-4xl font-black uppercase tracking-tighter mb-8 italic">IDENTITY_CHECK</h2>
+          <h2 className="text-3xl md:text-4xl font-black uppercase tracking-tighter mb-8 italic">IDENTITY_CHECK</h2>
           
-          <form onSubmit={handleLogin} className="space-y-12">
+          <form onSubmit={handleLogin} className="space-y-8 md:space-y-12">
             <div className="space-y-2">
-              <label className="text-xs font-black tracking-widest text-gray-500 uppercase">TEAM ID</label>
+              <label className="text-[10px] md:text-xs font-black tracking-widest text-gray-500 uppercase">TEAM ID</label>
               <input
                 type="text"
                 autoFocus
                 value={teamId}
                 onChange={(e) => setTeamId(e.target.value)}
                 placeholder="EXP-XXXX"
-                className="w-full text-2xl font-black bg-transparent border-b-2 border-black py-2 focus:outline-none placeholder-gray-200 uppercase"
+                className="w-full text-xl md:text-2xl font-black bg-transparent border-b-2 border-black py-2 focus:outline-none placeholder-gray-200 uppercase"
                 required
                 disabled={isLoading}
               />
             </div>
 
             <div className="space-y-2 relative">
-              <label className="text-xs font-black tracking-widest text-gray-500 uppercase">ACCESS_KEY</label>
+              <label className="text-[10px] md:text-xs font-black tracking-widest text-gray-500 uppercase">ACCESS_KEY</label>
               <input
                 type={showPassword ? 'text' : 'password'}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="********"
-                className="w-full text-2xl font-black bg-transparent border-b-2 border-black py-2 focus:outline-none placeholder-gray-200"
+                className="w-full text-xl md:text-2xl font-black bg-transparent border-b-2 border-black py-2 focus:outline-none placeholder-gray-200"
                 required
                 disabled={isLoading}
               />
@@ -139,7 +139,7 @@ const Login = () => {
                 className="absolute right-0 bottom-2 text-black/50 hover:text-black transition-colors"
                 disabled={isLoading}
               >
-                {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
               </button>
             </div>
 
@@ -147,9 +147,9 @@ const Login = () => {
               <motion.div 
                 initial={{ opacity: 0, height: 0 }}
                 animate={{ opacity: 1, height: 'auto' }}
-                className="flex items-center gap-2 text-red-500 font-black text-sm bg-red-50 p-4 border border-red-200"
+                className="flex items-center gap-2 text-red-500 font-black text-[10px] md:text-sm bg-red-50 p-3 md:p-4 border border-red-200"
               >
-                <AlertCircle size={16} />
+                <AlertCircle size={14} className="md:w-4 md:h-4" />
                 <span>ERROR: {error}</span>
               </motion.div>
             )}
@@ -158,7 +158,7 @@ const Login = () => {
               type="submit"
               disabled={isLoading}
               className={`
-                w-full group relative overflow-hidden py-6 border-2 border-black font-black text-xl uppercase tracking-tighter transition-all duration-150
+                w-full group relative overflow-hidden py-4 md:py-6 border-2 border-black font-black text-lg md:text-xl uppercase tracking-tighter transition-all duration-150
                 ${isLoading 
                   ? 'bg-gray-100 text-gray-400 cursor-wait' 
                   : 'bg-black text-white hover:bg-white hover:text-black'}
@@ -166,12 +166,12 @@ const Login = () => {
             >
               <span className="relative z-10 flex items-center justify-center gap-4">
                 {isLoading ? 'VERIFYING...' : 'INITIALIZE'}
-                {!isLoading && <ArrowRight className="group-hover:translate-x-2 transition-transform" size={24} />}
+                {!isLoading && <ArrowRight className="group-hover:translate-x-2 transition-transform" size={20} />}
               </span>
             </button>
           </form>
 
-          <p className="mt-12 text-[10px] text-gray-400 font-bold uppercase tracking-widest leading-relaxed">
+          <p className="mt-8 md:mt-12 text-[8px] md:text-[10px] text-gray-400 font-bold uppercase tracking-widest leading-relaxed">
             NOTICE: UNAUTHORIZED ACCESS ATTEMPTS ARE LOGGED. <br />
             ENSURE YOUR TEAM COORDINATOR HAS ALLOCATED YOUR CREDENTIALS.
           </p>

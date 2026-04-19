@@ -1,7 +1,17 @@
 import React, { useEffect, useState, useCallback, useRef, useMemo } from "react";
 import { Loader2, Play, StopCircle, Users, Trophy, Clock, RefreshCw, Edit, Trash2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { getAllRounds, setRoundLive, endRound, getAllTeams, updateTeam, deleteTeam } from "../utils/adminApi";
+import { 
+  getAllRounds, 
+  setRoundLive, 
+  endRound, 
+  getAllTeams, 
+  updateTeam, 
+  deleteTeam,
+  unlockRoundForTeam,
+  forceAdvanceTeam,
+  unlockRoundGlobally
+} from "../utils/adminApi";
 import { initializeSocket, subscribeToLeaderboard, disconnectSocket } from "../utils/socketClient";
 
 // Global cache for admin dashboard data
@@ -304,11 +314,18 @@ const AdminDashboard = () => {
     const nextRoundNumber = !liveRound ? 1 : 
       liveRound.roundNumber >= 3 ? 'Finished' : liveRound.roundNumber + 1;
     
+    const getRoundLabel = (num) => {
+      if (num === 1) return "ROUND 1";
+      if (num === 2) return "ROUND 2";
+      if (num === 3) return "FINAL ROUND";
+      return `ROUND ${num}`;
+    };
+
     return {
       totalTeams: teams.length,
       liveTeamsCount: rounds.reduce((acc, r) => acc + (r.stats?.liveTeams || 0), 0),
-      currentRound: liveRound?.roundNumber || 'Round 0',
-      nextRound: nextRoundNumber,
+      currentRound: liveRound ? getRoundLabel(liveRound.roundNumber) : 'None',
+      nextRound: typeof nextRoundNumber === 'number' ? getRoundLabel(nextRoundNumber) : nextRoundNumber,
       liveRound
     };
   }, [rounds, teams]);
@@ -393,7 +410,48 @@ const AdminDashboard = () => {
     }
   }, [confirmDelete, teamToDelete, showDeleteModal, deletePassword, debouncedRefresh]);
 
-  // Manual refresh handler
+  const handleUnlockGlobally = useCallback(async (roundId) => {
+    try {
+      setLoading(true);
+      setError(null);
+      await unlockRoundGlobally(roundId);
+      setTimeout(() => debouncedRefresh(), 100);
+    } catch (error) {
+      console.error('Unlock globally error:', error);
+      setError(error.message || 'Failed to unlock round globally');
+    } finally {
+      setLoading(false);
+    }
+  }, [debouncedRefresh]);
+
+  const handleUnlockForTeam = useCallback(async (teamId, roundNumber) => {
+    try {
+      setLoading(true);
+      setError(null);
+      await unlockRoundForTeam(teamId, roundNumber);
+      setTimeout(() => debouncedRefresh('teams'), 100);
+    } catch (error) {
+      console.error('Unlock for team error:', error);
+      setError(error.message || 'Failed to unlock round for team');
+    } finally {
+      setLoading(false);
+    }
+  }, [debouncedRefresh]);
+
+  const handleForceAdvance = useCallback(async (teamId) => {
+    try {
+      setLoading(true);
+      setError(null);
+      await forceAdvanceTeam(teamId);
+      setTimeout(() => debouncedRefresh('teams'), 100);
+    } catch (error) {
+      console.error('Force advance error:', error);
+      setError(error.message || 'Failed to force advance team');
+    } finally {
+      setLoading(false);
+    }
+  }, [debouncedRefresh]);
+
   const handleManualRefresh = useCallback(async () => {
     try {
       setLoading(true);
@@ -407,32 +465,38 @@ const AdminDashboard = () => {
     }
   }, []);
 
+  const getRoundLabel = (num) => {
+    if (num === 1) return "ROUND 1";
+    if (num === 2) return "ROUND 2";
+    if (num === 3) return "FINAL ROUND";
+    return `ROUND ${num}`;
+  };
+
   return (
-    <div className="min-h-screen bg-gray-950 text-gray-100 p-6 font-mono">
+    <div className="min-h-screen bg-black text-white p-6 font-mono selection:bg-white selection:text-black">
       {/* Header */}
       <motion.div 
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="flex justify-between items-center mb-8 border-b border-gray-800 pb-4"
+        className="flex justify-between items-center mb-8 border-4 border-white p-6 bg-black"
       >
         <div>
-          <h1 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-purple-400 to-blue-500">
-            GAME CONTROL PANEL
+          <h1 className="text-4xl font-black uppercase tracking-tighter">
+            GAME_CONTROL_PANEL
           </h1>
-          <p className="text-sm text-gray-500">Admin Dashboard</p>
-          <p className="text-xs text-gray-600">Last Update: {new Date(lastUpdate).toLocaleTimeString()}</p>
+          <p className="text-sm mt-2 opacity-70">ADMIN_DASHBOARD // SYSTEM_v2.0</p>
+          <p className="text-xs opacity-50">LAST_UPDATE: {new Date(lastUpdate).toLocaleTimeString()}</p>
         </div>
-        <div className="flex items-center space-x-4">
-          <div className="flex items-center space-x-2 bg-gray-900 px-3 py-1 rounded-full">
-            <span className={`h-3 w-3 rounded-full ${loading ? 'bg-yellow-500 animate-pulse' : 'bg-green-500'}`}></span>
-            <span className="text-xs">{loading ? 'Syncing...' : 'Live'}</span>
+        <div className="flex items-center space-x-6">
+          <div className="flex items-center space-x-3 border-2 border-white px-4 py-2">
+            <span className={`h-4 w-4 ${loading ? 'bg-yellow-400 animate-pulse' : 'bg-green-400'}`}></span>
+            <span className="text-sm font-bold uppercase">{loading ? 'Syncing...' : 'Live'}</span>
           </div>
           <button 
             onClick={handleManualRefresh}
             disabled={loading}
-            className="text-xs bg-gray-800 hover:bg-gray-700 disabled:opacity-50 px-3 py-1 rounded flex items-center space-x-1 transition-all"
+            className="text-sm border-2 border-white hover:bg-white hover:text-black disabled:opacity-50 px-6 py-2 font-bold uppercase transition-all active:translate-x-1 active:translate-y-1"
           >
-            <RefreshCw size={14} className={`mr-1 ${loading ? 'animate-spin' : ''}`} /> 
             Refresh
           </button>
         </div>
@@ -443,62 +507,54 @@ const AdminDashboard = () => {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 0.2 }}
-        className="grid grid-cols-4 gap-4 mb-8"
+        className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mb-8"
       >
-        <div className="bg-gray-900 p-4 rounded-lg border border-gray-800 hover:border-blue-500/30 transition-all">
-          <p className="text-gray-400 text-sm flex items-center">
-            <Trophy size={16} className="mr-2" /> Total Teams
-          </p>
-          <p className="text-2xl font-bold">{memoizedStats.totalTeams}</p>
-        </div>
-        <div className="bg-gray-900 p-4 rounded-lg border border-gray-800 hover:border-blue-500/30 transition-all">
-          <p className="text-gray-400 text-sm flex items-center">
-            <Users size={16} className="mr-2" /> Live Teams
-          </p>
-          <p className="text-2xl font-bold">{memoizedStats.liveTeamsCount}</p>
-        </div>
-        <div className="bg-gray-900 p-4 rounded-lg border border-gray-800 hover:border-blue-500/30 transition-all">
-          <p className="text-gray-400 text-sm flex items-center">
-            <Play size={16} className="mr-2" /> Current Round
-          </p>
-          <p className="text-2xl font-bold">{memoizedStats.currentRound}</p>
-        </div>
-        <div className="bg-gray-900 p-4 rounded-lg border border-gray-800 hover:border-blue-500/30 transition-all">
-          <p className="text-gray-400 text-sm flex items-center">
-            <Clock size={16} className="mr-2" /> Next Round
-          </p>
-          <p className="text-2xl font-bold">{memoizedStats.nextRound}</p>
-        </div>
+        {[
+          { label: "Total Teams", value: memoizedStats.totalTeams, icon: Trophy },
+          { label: "Live Teams", value: memoizedStats.liveTeamsCount, icon: Users },
+          { label: "Current Round", value: memoizedStats.currentRound, icon: Play },
+          { label: "Next Round", value: memoizedStats.nextRound, icon: Clock }
+        ].map((stat, i) => (
+          <div key={i} className="bg-black p-4 md:p-6 border-4 border-white hover:bg-white hover:text-black transition-colors group">
+            <p className="text-[10px] md:text-xs uppercase font-bold mb-2 flex items-center opacity-70 group-hover:opacity-100">
+              <stat.icon size={14} className="mr-2" /> {stat.label}
+            </p>
+            <p className="text-2xl md:text-3xl font-black tracking-tighter">{stat.value}</p>
+          </div>
+        ))}
       </motion.div>
 
       {/* Tabs */}
-      <div className="flex border-b border-gray-800 mb-6">
+      <div className="flex border-4 border-white mb-8 bg-black">
         <button
           onClick={() => setActiveTab("rounds")}
-          className={`px-4 py-2 font-medium transition-colors ${
+          className={`flex-1 px-8 py-4 text-sm font-black uppercase transition-colors ${
             activeTab === "rounds" 
-              ? "text-blue-400 border-b-2 border-blue-400" 
-              : "text-gray-400 hover:text-white"
+              ? "bg-white text-black" 
+              : "text-white hover:bg-white/10"
           }`}
         >
-          Rounds Control
+          Rounds_Control
         </button>
         <button
           onClick={() => setActiveTab("teams")}
-          className={`px-4 py-2 font-medium transition-colors ${
+          className={`flex-1 px-8 py-4 text-sm font-black uppercase transition-colors border-l-4 border-white ${
             activeTab === "teams" 
-              ? "text-blue-400 border-b-2 border-blue-400" 
-              : "text-gray-400 hover:text-white"
+              ? "bg-white text-black" 
+              : "text-white hover:bg-white/10"
           }`}
         >
-          Teams Overview
+          Teams_Overview
         </button>
       </div>
 
       {/* Content */}
       {loading && adminCache.subscribers.size <= 1 ? (
-        <div className="flex justify-center py-12">
-          <Loader2 className="animate-spin text-blue-400" size={24} />
+        <div className="flex justify-center py-24 border-4 border-white bg-black">
+          <div className="flex flex-col items-center">
+            <Loader2 className="animate-spin text-white mb-4" size={48} />
+            <p className="text-sm font-bold uppercase tracking-widest">Loading_System_Data...</p>
+          </div>
         </div>
       ) : (
         <AnimatePresence mode="wait">
@@ -508,66 +564,71 @@ const AdminDashboard = () => {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="space-y-4"
+              className="space-y-6"
             >
-              <h2 className="text-lg font-semibold text-gray-300 mb-2">ROUNDS CONTROL</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <h2 className="text-2xl font-black uppercase tracking-tighter mb-4">ROUNDS_CONTROL</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {rounds.map((round) => (
                   <motion.div
                     key={round.id}
                     layout
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.3 }}
-                    className={`p-4 rounded-lg border ${
-                      round.status === 'live' 
-                        ? 'border-blue-500/30 bg-blue-500/10 glow' 
-                        : 'border-gray-800 bg-gray-900'
-                    } hover:bg-gray-800/50 transition-all`}
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    className={`p-6 border-4 border-white bg-black hover:shadow-[8px_8px_0px_0px_rgba(255,255,255,1)] transition-all ${
+                      round.status === 'live' ? 'border-yellow-400 shadow-[8px_8px_0px_0px_rgba(250,204,21,1)]' : ''
+                    }`}
                   >
-                    <div className="flex justify-between items-start">
-                        <div>
-                        <div className="flex items-center space-x-2 mb-1">
-                          <span className={`inline-block h-2 w-2 rounded-full ${
-                            round.status === 'live' ? 'bg-green-500 animate-pulse' : 
-                            round.status === 'ended' ? 'bg-red-500' : 'bg-gray-500'
-                          }`}></span>
-                          <span className="font-bold text-lg">ROUND {round.roundNumber}</span>
+                    <div className="flex flex-col h-full justify-between">
+                      <div className="mb-6">
+                        <div className="flex items-center justify-between mb-4">
+                          <span className="text-2xl font-black tracking-tighter uppercase">
+                            {getRoundLabel(round.roundNumber)}
+                          </span>
+                          <span className={`px-3 py-1 text-xs font-black uppercase ${
+                            round.status === 'live' ? 'bg-yellow-400 text-black' : 
+                            round.status === 'ended' ? 'bg-red-600 text-white' : 'bg-gray-700 text-white'
+                          }`}>
+                            {round.status}
+                          </span>
                         </div>
-                        <div className="text-xs text-gray-400 flex space-x-2">
-                          <span>Status: <span className={`font-medium ${
-                            round.status === 'live' ? 'text-green-400' : 
-                            round.status === 'ended' ? 'text-red-400' : 'text-yellow-400'
-                          }`}>{round.status.toUpperCase()}</span></span>
-                          {round.status === 'live' && (
-                            <span>Live Teams: <span className="font-medium text-blue-400">{memoizedStats.liveTeamsCount}</span></span>
-                          )}
+                        
+                        <div className="space-y-2">
+                          <div className="flex justify-between text-xs font-bold uppercase opacity-60">
+                            <span>Live_Teams</span>
+                            <span>{round.stats?.liveTeams || 0}</span>
+                          </div>
+                          <div className="flex justify-between text-xs font-bold uppercase opacity-60">
+                            <span>Completed</span>
+                            <span>{round.stats?.completedTeams || 0}</span>
+                          </div>
                         </div>
                       </div>
-                      <div className="flex space-x-2">
+
+                      <div className="grid grid-cols-1 gap-2">
                         {round.status !== 'live' ? (
-                          <motion.button
+                          <button
                             onClick={() => setLive(round.id)}
-                            whileHover={{ scale: 1.05 }}
-                            whileTap={{ scale: 0.95 }}
-                            className="text-xs bg-blue-600 hover:bg-blue-500 disabled:opacity-50 px-3 py-1 rounded flex items-center space-x-1 transition-colors"
                             disabled={!!memoizedStats.liveRound || loading}
+                            className="bg-white text-black font-black uppercase py-2 hover:bg-gray-200 disabled:opacity-50 transition-colors text-sm"
                           >
-                            <Play size={14} />
-                            <span>GO LIVE</span>
-                          </motion.button>
+                            GO LIVE
+                          </button>
                         ) : (
-                          <motion.button
+                          <button
                             onClick={() => handleEndRound(round.id)}
-                            whileHover={{ scale: 1.05 }}
-                            whileTap={{ scale: 0.95 }}
-                            className="text-xs bg-red-600 hover:bg-red-500 disabled:opacity-50 px-3 py-1 rounded flex items-center space-x-1 transition-colors"
                             disabled={loading}
+                            className="bg-red-600 text-white font-black uppercase py-2 hover:bg-red-700 transition-colors text-sm"
                           >
-                            <StopCircle size={14} />
-                            <span>END</span>
-                          </motion.button>
+                            END ROUND
+                          </button>
                         )}
+                        <button
+                          onClick={() => handleUnlockGlobally(round.id)}
+                          disabled={loading}
+                          className="border-2 border-white text-white font-black uppercase py-2 hover:bg-white hover:text-black transition-colors text-sm"
+                        >
+                          Unlock Globally
+                        </button>
                       </div>
                     </div>
                   </motion.div>
@@ -580,155 +641,130 @@ const AdminDashboard = () => {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="space-y-4"
+              className="space-y-6"
             >
-              <h2 className="text-lg font-semibold text-gray-300 mb-2">TEAMS OVERVIEW</h2>
-              <div className="overflow-x-auto">
-                <table className="w-full border-collapse">
+              <h2 className="text-2xl font-black uppercase tracking-tighter mb-4">TEAMS_OVERVIEW</h2>
+              <div className="overflow-x-auto border-4 border-white">
+                <table className="w-full border-collapse bg-black text-white">
                   <thead>
-                    <tr className="bg-gray-900 text-left text-sm text-gray-400">
-                      <th className="p-3 border-b border-gray-800">Team ID</th>
-                      <th className="p-3 border-b border-gray-800">Team Name</th>
-                      <th className="p-3 border-b border-gray-800">Members</th>
-                      <th className="p-3 border-b border-gray-800">Status</th>
-                      <th className="p-3 border-b border-gray-800">Actions</th>
+                    <tr className="bg-white text-black font-black uppercase text-xs">
+                      <th className="p-4 border-b-4 border-black text-left">ID</th>
+                      <th className="p-4 border-b-4 border-black text-left">Team Name</th>
+                      <th className="p-4 border-b-4 border-black text-left text-nowrap">Current Round</th>
+                      <th className="p-4 border-b-4 border-black text-left text-nowrap">Unlocked</th>
+                      <th className="p-4 border-b-4 border-black text-left text-nowrap">Progress</th>
+                      <th className="p-4 border-b-4 border-black text-left">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
                     {teams.map((team) => {
                       const live = isTeamLive(team.teamId);
+                      const progress = team.stats?.roundProgress || [];
 
                       return (
                         <tr 
                           key={team.id}
-                          className={`border-b border-gray-700 hover:bg-gray-800/30 transition-colors ${
-                            live ? 'bg-green-900/10' : ''
+                          className={`border-b-2 border-white hover:bg-white/5 transition-colors ${
+                            live ? 'shadow-[inset_4px_0_0_0_#4ade80]' : ''
                           }`}
                         >
-                          <td className="p-3 font-mono text-sm">{team.teamId}</td>
+                          <td className="p-4 font-mono text-xs opacity-50">{team.teamId}</td>
                           
-                          {editingTeam === team.id ? (
-                            <>
-                              <td className="p-3">
+                          <td className="p-4">
+                            {editingTeam === team.id ? (
                                 <input
                                   type="text"
                                   value={teamEditForm.team_name}
                                   onChange={(e) => setTeamEditForm({...teamEditForm, team_name: e.target.value})}
-                                  className="bg-gray-700 border border-gray-600 rounded px-3 py-2 w-full focus:outline-none focus:ring-1 focus:ring-blue-500 text-sm"
+                                  className="bg-black border-2 border-white px-3 py-2 w-full font-bold focus:bg-white focus:text-black outline-none"
                                 />
-                              </td>
-                              <td className="p-3">
-                                <div className="grid grid-cols-2 gap-2">
-                                  <input
-                                    value={teamEditForm.member1}
-                                    onChange={(e) => setTeamEditForm({...teamEditForm, member1: e.target.value})}
-                                    className="bg-gray-700 border border-gray-600 rounded px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
-                                    placeholder="Member 1"
-                                  />
-                                  <input
-                                    value={teamEditForm.member2}
-                                    onChange={(e) => setTeamEditForm({...teamEditForm, member2: e.target.value})}
-                                    className="bg-gray-700 border border-gray-600 rounded px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
-                                    placeholder="Member 2"
-                                  />
-                                  <input
-                                    value={teamEditForm.member3}
-                                    onChange={(e) => setTeamEditForm({...teamEditForm, member3: e.target.value})}
-                                    className="bg-gray-700 border border-gray-600 rounded px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
-                                    placeholder="Member 3"
-                                  />
-                                  <input
-                                    value={teamEditForm.member4}
-                                    onChange={(e) => setTeamEditForm({...teamEditForm, member4: e.target.value})}
-                                    className="bg-gray-700 border border-gray-600 rounded px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
-                                    placeholder="Member 4"
-                                  />
-                                </div>
-                              </td>
-                            </>
-                          ) : (
-                            <>
-                              <td className="p-3 font-medium">{team.teamName}</td>
-                              <td className="p-3">
-                                <div className="text-sm space-y-1">
-                                  <div className="flex gap-2">
-                                    {team.members && team.members.map((member, idx) => (
-                                      <span key={idx} className="text-gray-300">{member.name}</span>
-                                    ))}
-                                  </div>
-                                </div>
-                              </td>
-                            </>
-                          )}
-
-                          <td className="p-3">
-                            <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
-                              live ? 'bg-green-900/50 text-green-400 border border-green-400/30' : 'bg-gray-700 text-gray-400'
-                            }`}>
-                              {live ? 'Live' : 'Offline'}
+                            ) : (
+                                <span className="font-black text-sm uppercase">{team.teamName}</span>
+                            )}
+                          </td>
+                          
+                          <td className="p-4">
+                            <span className="font-bold text-xs uppercase bg-white text-black px-2 py-1">
+                                {team.currentRound === 4 ? 'FINISHED' : getRoundLabel(team.currentRound)}
                             </span>
                           </td>
 
-                          <td className="p-3">
+                          <td className="p-4">
+                            <div className="flex gap-1 flex-wrap">
+                                {(team.unlockedRounds || []).sort().map(r => (
+                                    <span key={r} className="border border-white/50 text-[10px] font-bold px-1.5 py-0.5">
+                                        R{r}
+                                    </span>
+                                ))}
+                            </div>
+                          </td>
+
+                          <td className="p-4">
                             <div className="flex gap-2">
+                                {[1, 2, 3].map(rNum => {
+                                    const rp = progress.find(p => p.roundNumber === rNum);
+                                    let bgColor = 'bg-gray-800';
+                                    if (rp?.status === 'completed') bgColor = 'bg-green-500';
+                                    else if (rp?.status === 'in_progress') bgColor = 'bg-yellow-400';
+                                    
+                                    return (
+                                        <div 
+                                            key={rNum} 
+                                            className={`w-3 h-3 ${bgColor} border border-white/20`}
+                                            title={`${getRoundLabel(rNum)}: ${rp?.status || 'not_started'}`}
+                                        />
+                                    );
+                                })}
+                            </div>
+                          </td>
+
+                          <td className="p-4">
+                            <div className="flex gap-2 flex-wrap max-w-[300px]">
                               {editingTeam === team.id ? (
                                 <>
-                                  <motion.button
+                                  <button
                                     onClick={saveTeamEdit}
-                                    whileHover={{ scale: 1.05 }}
-                                    whileTap={{ scale: 0.95 }}
-                                    className="bg-green-600 hover:bg-green-500 px-3 py-1 rounded text-sm transition-colors"
+                                    className="bg-green-500 text-black px-3 py-1 font-black uppercase text-[10px] hover:bg-green-400 transition-colors"
                                   >
                                     Save
-                                  </motion.button>
-                                  <motion.button
+                                  </button>
+                                  <button
                                     onClick={() => setEditingTeam(null)}
-                                    whileHover={{ scale: 1.05 }}
-                                    whileTap={{ scale: 0.95 }}
-                                    className="bg-gray-600 hover:bg-gray-500 px-3 py-1 rounded text-sm transition-colors"
+                                    className="bg-red-600 text-white px-3 py-1 font-black uppercase text-[10px] hover:bg-red-700 transition-colors"
                                   >
                                     Cancel
-                                  </motion.button>
+                                  </button>
                                 </>
                               ) : (
                                 <>
-                                  <motion.button
+                                  <button
+                                    onClick={() => handleForceAdvance(team.id)}
+                                    className="border-2 border-white px-2 py-1 text-[10px] font-black uppercase hover:bg-white hover:text-black transition-colors"
+                                  >
+                                    Force Advance
+                                  </button>
+                                  <button
                                     onClick={() => {
-                                      if (!confirmEdit) {
-                                        setTeamToEdit(team.id);
-                                        setConfirmEdit(true);
-                                        return;
-                                      }
-                                      if (teamToEdit === team.id) {
-                                        editTeam(team);
-                                        setConfirmEdit(false);
-                                        setTeamToEdit(null);
-                                      }
+                                        const nextRoundToUnlock = [1,2,3].find(r => !(team.unlockedRounds || []).includes(r));
+                                        if (nextRoundToUnlock) handleUnlockForTeam(team.id, nextRoundToUnlock);
                                     }}
-                                    whileHover={{ scale: 1.05 }}
-                                    whileTap={{ scale: 0.95 }}
-                                    className={`p-2 rounded transition-colors ${
-                                      confirmEdit && teamToEdit === team.id 
-                                        ? 'bg-blue-700 hover:bg-blue-600' 
-                                        : 'bg-blue-600 hover:bg-blue-500'
-                                    }`}
-                                    title={confirmEdit && teamToEdit === team.id ? "Confirm Edit" : "Edit"}
+                                    disabled={team.unlockedRounds?.length >= 3}
+                                    className="border-2 border-white px-2 py-1 text-[10px] font-black uppercase hover:bg-white hover:text-black transition-colors disabled:opacity-30"
                                   >
-                                    <Edit size={16} />
-                                  </motion.button>
-                                  <motion.button
+                                    Unlock Next
+                                  </button>
+                                  <button
+                                    onClick={() => editTeam(team)}
+                                    className="p-1 border-2 border-white hover:bg-blue-600 transition-colors"
+                                  >
+                                    <Edit size={14} />
+                                  </button>
+                                  <button
                                     onClick={() => handleTerminateTeam(team.teamId)}
-                                    whileHover={{ scale: 1.05 }}
-                                    whileTap={{ scale: 0.95 }}
-                                    className={`p-2 rounded transition-colors ${
-                                      confirmDelete && teamToDelete === team.teamId 
-                                        ? 'bg-red-700 hover:bg-red-600'
-                                        : 'bg-red-600 hover:bg-red-500'
-                                    }`}
-                                    title={confirmDelete && teamToDelete === team.teamId ? "Confirm Termination" : "Terminate"}
+                                    className="p-1 border-2 border-white hover:bg-red-600 transition-colors"
                                   >
-                                    <Trash2 size={16} />
-                                  </motion.button>
+                                    <Trash2 size={14} />
+                                  </button>
                                 </>
                               )}
                             </div>
@@ -744,42 +780,37 @@ const AdminDashboard = () => {
         </AnimatePresence>
       )}
 
-      {/* Glow effect CSS */}
+      {/* Brutalist styling overrides */}
       <style jsx>{`
-        .glow {
-          box-shadow: 0 0 10px rgba(59, 130, 246, 0.5);
-          animation: pulse 2s infinite;
-        }
-        @keyframes pulse {
-          0% { box-shadow: 0 0 10px rgba(59, 130, 246, 0.5); }
-          50% { box-shadow: 0 0 20px rgba(59, 130, 246, 0.8); }
-          100% { box-shadow: 0 0 10px rgba(59, 130, 246, 0.5); }
-        }
+        .text-nowrap { white-space: nowrap; }
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #000; }
+        ::-webkit-scrollbar-thumb { background: #fff; border: 2px solid #000; }
+        ::-webkit-scrollbar-thumb:hover { background: #ccc; }
       `}</style>
 
-      {/* Delete Confirmation Modal */}
       <AnimatePresence>
         {showDeleteModal && (
           <motion.div 
-            className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50"
+            className="fixed inset-0 bg-black/90 flex items-center justify-center z-50 p-4"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
           >
             <motion.div 
-              className="bg-gray-800 p-6 rounded-lg max-w-md w-full mx-4 border border-gray-700"
-              initial={{ scale: 0.8, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.8, opacity: 0 }}
+              className="bg-black border-4 border-white p-8 max-w-md w-full shadow-[12px_12px_0px_0px_rgba(255,255,255,1)]"
+              initial={{ scale: 0.9, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.9, opacity: 0, y: 20 }}
             >
-              <h3 className="text-xl font-bold mb-4 text-red-400">Admin Password Required</h3>
-              <p className="mb-4 text-gray-300">Please enter the admin password to confirm team termination.</p>
+              <h3 className="text-3xl font-black uppercase mb-4 text-red-600">SECURITY_ALERT</h3>
+              <p className="mb-6 font-bold text-sm tracking-tight opacity-80">CONFIRM ACTION: TERMINATE_TEAM_DATA. REQUIRES LEVEL_0_ACCESS_PASSWORD.</p>
               <input
                 type="password"
                 value={deletePassword}
                 onChange={e => setDeletePassword(e.target.value)}
-                className="bg-gray-700 border border-gray-600 rounded px-3 py-2 w-full mb-3 focus:outline-none focus:ring-1 focus:ring-red-500"
-                placeholder="Admin Password"
+                className="bg-black border-4 border-white p-4 w-full mb-6 font-black focus:bg-white focus:text-black outline-none text-xl"
+                placeholder="PASSWORD_REQUIRED"
                 onKeyPress={(e) => {
                   if (e.key === 'Enter') {
                     handleTerminateTeam(teamToDelete);
@@ -787,37 +818,27 @@ const AdminDashboard = () => {
                 }}
               />
               {deleteError && (
-                <motion.p 
-                  className="text-red-500 mb-2 text-sm"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                >
+                <p className="text-red-500 font-black uppercase text-xs mb-6 animate-bounce">
                   {deleteError}
-                </motion.p>
+                </p>
               )}
-              <div className="flex justify-end gap-3">
-                <motion.button
+              <div className="grid grid-cols-2 gap-4">
+                <button
                   onClick={() => {
-                    setShowDeleteModal(false);
                     setConfirmDelete(false);
-                    setTeamToDelete(null);
+                    setShowDeleteModal(false);
                     setDeletePassword('');
-                    setDeleteError('');
                   }}
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  className="bg-gray-600 hover:bg-gray-500 px-4 py-2 rounded transition-colors"
+                  className="border-2 border-white text-white font-black uppercase py-3 hover:bg-white hover:text-black transition-colors"
                 >
-                  Cancel
-                </motion.button>
-                <motion.button
+                  ABORT
+                </button>
+                <button
                   onClick={() => handleTerminateTeam(teamToDelete)}
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  className="bg-red-600 hover:bg-red-500 px-4 py-2 rounded transition-colors"
+                  className="bg-red-600 text-white font-black uppercase py-3 hover:bg-red-700 transition-colors"
                 >
-                  Confirm Delete
-                </motion.button>
+                  EXECUTE
+                </button>
               </div>
             </motion.div>
           </motion.div>

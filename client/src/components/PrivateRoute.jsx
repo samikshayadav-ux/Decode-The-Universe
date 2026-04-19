@@ -11,57 +11,68 @@ const PrivateRoute = ({ children, roundNumber }) => {
 
   const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
+  const verifyAccess = useCallback(async () => {
+    if (!isLoggedIn || !authData) {
+      setIsVerifying(false);
+      return;
+    }
+
+    // If locally locked, don't even bother verifying
+    if (!authData.unlockedRounds?.includes(roundNumber)) {
+      setIsVerifying(false);
+      setServerVerified(false);
+      return;
+    }
+
+    try {
+      const endpoint = roundNumber === 3 ? '/api/gateway/finalround' : `/api/gateway/round${roundNumber}`;
+      const token = getJWTToken();
+      
+      const response = await fetch(`${API_URL}${endpoint}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({})
+      });
+
+      if (response.ok) {
+        setServerVerified(true);
+        setVerificationError(null);
+      } else if (response.status === 401 || response.status === 403) {
+        // Token expired or team doesn't have access
+        setServerVerified(false);
+        setVerificationError('Session expired or access denied');
+        if (response.status === 401) logout();
+      } else {
+        setServerVerified(false);
+        setVerificationError('Failed to verify round access');
+      }
+    } catch (err) {
+      console.error('Access verification failed:', err);
+      setServerVerified(false);
+      setVerificationError('Network error during verification');
+    } finally {
+      setIsVerifying(false);
+    }
+  }, [roundNumber, isLoggedIn, authData, getJWTToken, API_URL, logout]);
+
   useEffect(() => {
-    const verifyAccess = async () => {
-      if (!isLoggedIn || !authData) {
-        setIsVerifying(false);
-        return;
-      }
-
-      // If locally locked, don't even bother verifying
-      if (!authData.unlockedRounds?.includes(roundNumber)) {
-        setIsVerifying(false);
-        setServerVerified(false);
-        return;
-      }
-
-      try {
-        const endpoint = roundNumber === 3 ? '/api/gateway/finalround' : `/api/gateway/round${roundNumber}`;
-        const token = getJWTToken();
-        
-        const response = await fetch(`${API_URL}${endpoint}`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          },
-          body: JSON.stringify({})
-        });
-
-        if (response.ok) {
-          setServerVerified(true);
-          setVerificationError(null);
-        } else if (response.status === 401 || response.status === 403) {
-          // Token expired or team doesn't have access
-          setServerVerified(false);
-          setVerificationError('Session expired or access denied');
-          if (response.status === 401) logout();
-        } else {
-          setServerVerified(false);
-          setVerificationError('Failed to verify round access');
-        }
-      } catch (err) {
-        console.error('Access verification failed:', err);
-        setServerVerified(false);
-        setVerificationError('Network error during verification');
-      } finally {
-        setIsVerifying(false);
-      }
-    };
-
     setIsVerifying(true);
     verifyAccess();
-  }, [roundNumber, isLoggedIn, authData, getJWTToken, API_URL, logout]);
+  }, [verifyAccess]);
+
+  // Re-verify on window focus
+  useEffect(() => {
+    const handleFocus = () => {
+      console.log('Window focused, re-verifying access...');
+      verifyAccess();
+    };
+
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
+  }, [verifyAccess]);
 
   if (isLoading || isVerifying) {
     return (

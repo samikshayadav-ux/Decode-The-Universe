@@ -1,11 +1,13 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Activity, Trophy, Clock, Target, Layers } from 'lucide-react';
 import { initializeSocket, joinRound, leaveRound, subscribeToLeaderboard, subscribeToScoreChanges, disconnectSocket } from '../utils/socketClient';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
 const LeaderBoard = () => {
   const [teams, setTeams] = useState([]);
-  const [currentRound, setCurrentRound] = useState(0);
+  const [currentRound, setCurrentRound] = useState(1);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [connected, setConnected] = useState(false);
@@ -20,7 +22,7 @@ const LeaderBoard = () => {
    */
   const formatTime = useCallback((seconds) => {
     if (!seconds && seconds !== 0) return '--:--';
-    const adjustedSeconds = seconds + 1;
+    const adjustedSeconds = Math.floor(seconds);
     const mins = Math.floor(adjustedSeconds / 60);
     const secs = adjustedSeconds % 60;
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
@@ -55,44 +57,42 @@ const LeaderBoard = () => {
     }
 
     const processedTeams = data.map(team => ({
-      team_id: team.team_id,
-      team_name: team.team_name,
+      team_id: team.team_id || team.teamId,
+      team_name: team.team_name || team.teamName,
       score: team.score || 0,
-      displayTime: team.answers?.length > 0
-        ? (team.completed_at ? team.total_time_spent : team.time_at_last_submission)
-        : null,
-      sortTime: team.answers?.length > 0
-        ? (team.completed_at ? team.total_time_spent : team.time_at_last_submission) || Infinity
-        : Infinity,
-      lastSubmittedAt: team.updated_at
+      round: team.currentRound || currentRound,
+      displayTime: team.displayTime || team.totalTimeSpent || 0,
+      status: team.status,
+      updatedAt: team.updatedAt || team.updated_at
     }));
 
+    // Sorting logic: Higher score first, then lower time
     const sortedTeams = [...processedTeams].sort((a, b) => {
       if (b.score !== a.score) return b.score - a.score;
-      if (a.sortTime !== b.sortTime) return a.sortTime - b.sortTime;
-      return new Date(a.lastSubmittedAt) - new Date(b.lastSubmittedAt);
+      return a.displayTime - b.displayTime;
     });
 
     // Track position changes
     const newPositionChanges = {};
     sortedTeams.forEach((team, currentIndex) => {
-      const previousIndex = previousPositionsRef.current[team.team_id];
+      const id = team.team_id;
+      const previousIndex = previousPositionsRef.current[id];
       if (previousIndex !== undefined && previousIndex !== currentIndex) {
         const change = previousIndex - currentIndex;
-        newPositionChanges[team.team_id] = change;
+        newPositionChanges[id] = change;
 
-        if (positionChangeTimersRef.current[team.team_id]) {
-          clearTimeout(positionChangeTimersRef.current[team.team_id]);
+        if (positionChangeTimersRef.current[id]) {
+          clearTimeout(positionChangeTimersRef.current[id]);
         }
 
-        positionChangeTimersRef.current[team.team_id] = setTimeout(() => {
+        positionChangeTimersRef.current[id] = setTimeout(() => {
           setPositionChanges(prev => {
             const updated = { ...prev };
-            delete updated[team.team_id];
+            delete updated[id];
             return updated;
           });
-          delete positionChangeTimersRef.current[team.team_id];
-        }, 60000);
+          delete positionChangeTimersRef.current[id];
+        }, 30000);
       }
     });
 
@@ -104,161 +104,216 @@ const LeaderBoard = () => {
 
     setPositionChanges(newPositionChanges);
     setTeams(sortedTeams);
-  }, []);
+  }, [currentRound]);
 
   /**
    * Initialize Socket.IO connection and setup event listeners
    */
   useEffect(() => {
+    let socket;
     const setupSocket = async () => {
       try {
-        // Fetch initial data
         await fetchLeaderboard(currentRound);
 
-        // Initialize Socket.IO connection
-        const socket = initializeSocket(API_URL);
+        socket = initializeSocket(API_URL);
         if (!socket) {
           setError('Failed to connect to socket');
           return;
         }
 
-        // Join round leaderboard room
         joinRound(currentRound);
         setConnected(true);
 
-        // Subscribe to leaderboard updates
         unsubscribeRef.current = subscribeToLeaderboard((data) => {
-          console.log('🔄 Leaderboard update received:', data);
-          if (data && Array.isArray(data)) {
-            processLeaderboard(data);
-          }
+          // Handle both array format and wrapped object format
+          const leaderboardData = Array.isArray(data) ? data : (data.leaderboard || []);
+          processLeaderboard(leaderboardData);
         });
 
-        // Subscribe to team score changes (for polling fallback)
+        // Use standard score change listener as fallback/multiplier
         const unsubscribeScores = subscribeToScoreChanges(() => {
-          console.log('📊 Score change detected');
           fetchLeaderboard(currentRound);
         });
 
         return () => {
           if (unsubscribeRef.current) unsubscribeRef.current();
-          unsubscribeScores();
+          if (unsubscribeScores) unsubscribeScores();
           leaveRound(currentRound);
         };
       } catch (err) {
         console.error('Socket setup error:', err);
-        setError('Connection error - using polling');
-        
-        // Fallback: polling every 5 seconds if Socket.IO fails
+        setError('Using fallback polling');
         const pollInterval = setInterval(() => fetchLeaderboard(currentRound), 5000);
         return () => clearInterval(pollInterval);
       }
     };
 
-    const cleanup = setupSocket();
+    const cleanupPromise = setupSocket();
     return () => {
-      if (cleanup) cleanup();
+      cleanupPromise.then(cleanup => cleanup && cleanup());
       Object.values(positionChangeTimersRef.current).forEach(timer => clearTimeout(timer));
-      disconnectSocket();
     };
   }, [currentRound, fetchLeaderboard, processLeaderboard]);
 
+  const rounds = [
+    { id: 1, name: 'ROUND 1' },
+    { id: 2, name: 'ROUND 2' },
+    { id: 3, name: 'FINAL ROUND' }
+  ];
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-white px-6 py-8">
-      <div className="max-w-6xl mx-auto">
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-5xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-purple-500 mb-2">
-            🏆 Global Leaderboard
-          </h1>
-          <div className="flex items-center gap-3 text-sm">
-            {connected && <span className="text-green-400">● Live Connected</span>}
-            {error && <span className="text-red-400">⚠ {error}</span>}
-            {loading && !teams.length && <span className="text-yellow-400">⟳ Loading...</span>}
+    <div className="min-h-screen bg-black text-white font-mono grid-bg p-4 md:p-8 relative overflow-hidden">
+      <div className="scanline" />
+      
+      <div className="max-w-7xl mx-auto relative z-10">
+        {/* Header Section */}
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 mb-12 border-b-4 border-white pb-8">
+          <div>
+            <div className="flex items-center gap-2 bg-accent text-black px-3 py-1 text-xs font-black mb-4 w-fit">
+              <Trophy size={14} />
+              <span>LIVE_RANKINGS // SYNC_ACTIVE</span>
+            </div>
+            <h1 className="text-6xl md:text-8xl font-black tracking-tighter leading-none italic uppercase">
+              LEADER<span className="text-accent underline">BOARD</span>
+            </h1>
+          </div>
+
+          <div className="flex flex-col items-end gap-2">
+            <div className={`flex items-center gap-2 px-4 py-2 border-2 ${connected ? 'border-green-500 text-green-500' : 'border-red-500 text-red-500'} font-black text-xs uppercase tracking-widest`}>
+              <div className={`w-2 h-2 rounded-full ${connected ? 'bg-green-500 animate-pulse' : 'bg-red-50'}`} />
+              {connected ? 'SOCKET_CONNECTED' : 'DISCONNECTED'}
+            </div>
+            {error && <span className="text-[10px] text-red-400 font-bold uppercase">{error}</span>}
           </div>
         </div>
 
-        {/* Round selector */}
-        <div className="mb-6 flex gap-3">
-          {[0, 1, 2, 3].map(round => (
+        {/* Round Selector Tabs */}
+        <div className="flex flex-wrap gap-2 mb-8">
+          {rounds.map((round) => (
             <button
-              key={round}
-              onClick={() => setCurrentRound(round)}
-              className={`px-4 py-2 rounded-lg font-semibold transition-all ${
-                currentRound === round
-                  ? 'bg-gradient-to-r from-blue-600 to-purple-600 shadow-lg'
-                  : 'bg-gray-700 hover:bg-gray-600'
-              }`}
+              key={round.id}
+              onClick={() => setCurrentRound(round.id)}
+              className={`
+                px-6 py-3 font-black text-sm transition-all duration-150 border-2
+                ${currentRound === round.id 
+                  ? 'bg-white text-black border-white' 
+                  : 'bg-black text-white border-white/20 hover:border-white'}
+              `}
             >
-              Round {round}
+              {round.name}
             </button>
           ))}
         </div>
 
-        {/* Leaderboard Table */}
-        <div className="bg-gray-800/50 backdrop-blur-sm rounded-xl shadow-2xl overflow-hidden border border-gray-700/50">
-          <table className="w-full">
-            <thead className="bg-gradient-to-r from-blue-900/50 to-purple-900/50 sticky top-0">
-              <tr>
-                <th className="p-4 text-left text-gray-300">Rank</th>
-                <th className="p-4 text-left text-gray-300">Team Name</th>
-                <th className="p-4 text-center text-gray-300">Score</th>
-                <th className="p-4 text-right text-gray-300">Time</th>
+        {/* Leaderboard Table Container */}
+        <div className="border-4 border-white bg-black overflow-x-auto">
+          <table className="w-full text-left border-collapse min-w-[800px]">
+            <thead>
+              <tr className="border-b-4 border-white bg-white/5">
+                <th className="p-6 text-xs font-black tracking-[0.2em] uppercase border-r-2 border-white/20 w-24">
+                  <div className="flex items-center gap-2"><Activity size={14} /> RANK</div>
+                </th>
+                <th className="p-6 text-xs font-black tracking-[0.2em] uppercase border-r-2 border-white/20">
+                  <div className="flex items-center gap-2"><Target size={14} /> TEAM</div>
+                </th>
+                <th className="p-6 text-xs font-black tracking-[0.2em] uppercase border-r-2 border-white/20 w-32">
+                  <div className="flex items-center gap-2"><Layers size={14} /> ROUND</div>
+                </th>
+                <th className="p-6 text-xs font-black tracking-[0.2em] uppercase border-r-2 border-white/20 w-32">
+                  <div className="flex items-center gap-2"><Trophy size={14} /> SCORE</div>
+                </th>
+                <th className="p-6 text-xs font-black tracking-[0.2em] uppercase w-40">
+                  <div className="flex items-center gap-2"><Clock size={14} /> TIME</div>
+                </th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-700/30">
-              {teams.length > 0 ? (
-                teams.map((team, index) => {
-                  const positionChange = positionChanges[team.team_id];
-                  const hasPositionChange = typeof positionChange === 'number' && positionChange !== 0;
+            <tbody className="divide-y-2 divide-white/10">
+              <AnimatePresence mode="popLayout">
+                {teams.length > 0 ? (
+                  teams.map((team, index) => {
+                    const positionChange = positionChanges[team.team_id];
+                    const isTop3 = index < 3;
+                    const borderClass = index === 0 ? 'border-l-8 border-yellow-400' : 
+                                       index === 1 ? 'border-l-8 border-gray-400' : 
+                                       index === 2 ? 'border-l-8 border-amber-700' : '';
 
-                  return (
-                    <tr
-                      key={team.team_id}
-                      className="border-t border-gray-700/30 hover:bg-gray-700/20 transition-colors"
-                    >
-                      <td className="p-4">
-                        <div className="flex items-center gap-2">
-                          <span className={`font-bold text-lg ${
-                            index === 0 ? 'text-yellow-400' :
-                            index === 1 ? 'text-gray-300' :
-                            index === 2 ? 'text-orange-400' :
-                            'text-gray-400'
-                          }`}>
-                            {index + 1}
-                          </span>
-                          {hasPositionChange && (
-                            <span className={`text-xs font-bold ${positionChange > 0 ? 'text-green-400' : 'text-red-400'}`}>
-                              {positionChange > 0 ? '↑' : '↓'} {Math.abs(positionChange)}
+                    return (
+                      <motion.tr
+                        layout
+                        initial={{ opacity: 0, x: -20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        exit={{ opacity: 0, x: 20 }}
+                        key={team.team_id}
+                        className={`group hover:bg-white/5 transition-colors ${borderClass}`}
+                      >
+                        <td className="p-6 border-r-2 border-white/20">
+                          <div className="flex flex-col items-start gap-1">
+                            <span className={`text-4xl font-black italic leading-none ${isTop3 ? 'text-yellow-400' : 'text-white'}`}>
+                              {(index + 1).toString().padStart(2, '0')}
                             </span>
-                          )}
+                            {positionChange !== undefined && positionChange !== 0 && (
+                              <span className={`text-[10px] font-black ${positionChange > 0 ? 'text-green-500' : 'text-red-500'}`}>
+                                {positionChange > 0 ? '▲' : '▼'} {Math.abs(positionChange)}
+                              </span>
+                            )}
+                          </div>
+                        </td>
+                        <td className="p-6 border-r-2 border-white/20">
+                          <div className="flex flex-col">
+                            <span className="text-xl font-black uppercase tracking-tight group-hover:text-accent transition-colors">
+                              {team.team_name}
+                            </span>
+                            <span className="text-[10px] text-white/40 font-bold uppercase tracking-widest">
+                              ID: {team.team_id}
+                            </span>
+                          </div>
+                        </td>
+                        <td className="p-6 border-r-2 border-white/20 font-black text-lg">
+                          {team.round === 3 ? 'FINAL' : `R${team.round}`}
+                        </td>
+                        <td className="p-6 border-r-2 border-white/20 font-black text-2xl text-accent">
+                          {team.score.toString().padStart(3, '0')}
+                        </td>
+                        <td className="p-6 font-black text-xl tabular-nums">
+                          {formatTime(team.displayTime)}
+                        </td>
+                      </motion.tr>
+                    );
+                  })
+                ) : (
+                  <tr>
+                    <td colSpan="5" className="p-24 text-center">
+                      {loading ? (
+                        <div className="flex flex-col items-center gap-4">
+                          <div className="w-12 h-12 border-4 border-accent border-t-transparent animate-spin" />
+                          <span className="text-sm font-black tracking-widest uppercase opacity-50">Fetching_Registry...</span>
                         </div>
-                      </td>
-                      <td className="p-4 font-medium">{team.team_name}</td>
-                      <td className="p-4 text-center">
-                        <span className="inline-flex items-center px-3 py-1 rounded-full bg-blue-900/50 text-blue-200 font-semibold">
-                          {team.score}
-                        </span>
-                      </td>
-                      <td className="p-4 text-right font-mono text-gray-400">
-                        {team.displayTime !== null ? formatTime(team.displayTime) : '--:--'}
-                      </td>
-                    </tr>
-                  );
-                })
-              ) : (
-                <tr>
-                  <td colSpan="4" className="p-12 text-center text-gray-500">
-                    {loading ? 'Loading leaderboard data...' : 'No teams found'}
-                  </td>
-                </tr>
-              )}
+                      ) : (
+                        <span className="text-sm font-black tracking-[0.5em] uppercase opacity-20">No_Data_Sequence_Found</span>
+                      )}
+                    </td>
+                  </tr>
+                )}
+              </AnimatePresence>
             </tbody>
           </table>
+        </div>
+
+        {/* Legend */}
+        <div className="mt-8 flex flex-wrap gap-8 opacity-40">
+          <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest">
+            <div className="w-2 h-0.5 bg-yellow-400" /> TOP_01 GOLD_CLASS
+          </div>
+          <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest">
+            <div className="w-2 h-0.5 bg-gray-400" /> TOP_02 SILVER_CLASS
+          </div>
+          <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest">
+            <div className="w-2 h-0.5 bg-amber-700" /> TOP_03 BRONZE_CLASS
+          </div>
         </div>
       </div>
     </div>
   );
 };
 
-export default LeaderBoard;
+export default LeaderBoard;
