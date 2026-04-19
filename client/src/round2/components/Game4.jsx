@@ -1,264 +1,116 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
+import { motion } from 'framer-motion';
 
 const MazeGame = ({ onComplete }) => {
-  // Maze dimensions
-  const ROWS = 20;
-  const COLS = 20;
-  const CELL_SIZE = 15;
-  
-  // Game elements
+  const ROWS = 15;
+  const COLS = 25;
+  const [maze, setMaze] = useState([]);
+  const [ballPos, setBallPos] = useState([1, 1]);
+  const [gameOver, setGameOver] = useState(false);
+
   const WALL = 1;
   const PATH = 0;
   const START = 2;
   const END = 3;
-  
-  // Generate maze with properly placed end point
+
   const generateMaze = () => {
-    let maze = Array(ROWS).fill().map(() => Array(COLS).fill(WALL));
-    
-    // Carve out paths
+    let m = Array(ROWS).fill().map(() => Array(COLS).fill(WALL));
     const stack = [[1, 1]];
-    maze[1][1] = PATH;
-    
+    m[1][1] = PATH;
     const directions = [[-2, 0], [2, 0], [0, -2], [0, 2]];
-    
     while (stack.length) {
       const [r, c] = stack[stack.length - 1];
       const shuffled = [...directions].sort(() => Math.random() - 0.5);
-      
       let moved = false;
-      
       for (const [dr, dc] of shuffled) {
-        const nr = r + dr;
-        const nc = c + dc;
-        
-        if (nr > 0 && nr < ROWS-1 && nc > 0 && nc < COLS-1 && maze[nr][nc] === WALL) {
-          maze[nr][nc] = PATH;
-          maze[r + dr/2][c + dc/2] = PATH;
+        const nr = r + dr, nc = c + dc;
+        if (nr > 0 && nr < ROWS-1 && nc > 0 && nc < COLS-1 && m[nr][nc] === WALL) {
+          m[nr][nc] = PATH;
+          m[r + dr/2][c + dc/2] = PATH;
           stack.push([nr, nc]);
           moved = true;
           break;
         }
       }
-      
       if (!moved) stack.pop();
     }
-    
-    // Find valid end position (furthest path cell from start)
-    let endR = 1, endC = 1, maxDist = 0;
-    
-    for (let r = 1; r < ROWS-1; r++) {
-      for (let c = 1; c < COLS-1; c++) {
-        if (maze[r][c] === PATH) {
-          const dist = Math.abs(r - 1) + Math.abs(c - 1); // Manhattan distance
-          if (dist > maxDist) {
-            maxDist = dist;
-            endR = r;
-            endC = c;
-          }
-        }
-      }
-    }
-    
-    // Set start and end points
-    maze[1][1] = START;
-    maze[endR][endC] = END; // Now guaranteed to be inside walls
-    
-    return maze;
+    m[1][1] = START;
+    m[ROWS-2][COLS-2] = END;
+    return m;
   };
-  
-  const [maze, setMaze] = useState(() => generateMaze());
-  const [ballPos, setBallPos] = useState([1, 1]);
-  const [gameOver, setGameOver] = useState(false);
-  const [win, setWin] = useState(false);
-  const mazeRef = useRef(null);
-  
-  // Handle keyboard controls
+
+  useEffect(() => {
+    setMaze(generateMaze());
+  }, []);
+
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (gameOver) return;
-      
       const [r, c] = ballPos;
-      let newR = r, newC = c;
-      
-      switch(e.key) {
-        case 'ArrowUp': newR--; break;
-        case 'ArrowDown': newR++; break;
-        case 'ArrowLeft': newC--; break;
-        case 'ArrowRight': newC++; break;
-        case 'w': newR--; break;
-        case 's': newR++; break;
-        case 'a': newC--; break;
-        case 'd': newC++; break;
-        default: return;
-      }
-      
-      if (newR >= 0 && newR < ROWS && newC >= 0 && newC < COLS) {
-        if (maze[newR][newC] !== WALL) {
-          setBallPos([newR, newC]);
-          if (maze[newR][newC] === END) {
-            setGameOver(true);
-            setWin(true);
-            // Call onComplete after a short delay
-            setTimeout(() => {
-              if (onComplete) onComplete();
-            }, 1500); // 1.5 second delay before moving to next game
-          }
+      let nr = r, nc = c;
+      if (e.key === 'ArrowUp' || e.key === 'w') nr--;
+      else if (e.key === 'ArrowDown' || e.key === 's') nr++;
+      else if (e.key === 'ArrowLeft' || e.key === 'a') nc--;
+      else if (e.key === 'ArrowRight' || e.key === 'd') nc++;
+      else return;
+
+      if (nr >= 0 && nr < ROWS && nc >= 0 && nc < COLS && maze[nr][nc] !== WALL) {
+        setBallPos([nr, nc]);
+        if (maze[nr][nc] === END) {
+          setGameOver(true);
+          setTimeout(() => onComplete('MAZE_SOLVED'), 1000);
         }
       }
     };
-    
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [ballPos, gameOver, maze, onComplete]);
-  
-  // Reset game (only used for the New Maze button)
-  const resetGame = () => {
-    const newMaze = generateMaze();
-    setMaze(newMaze);
-    setBallPos([1, 1]);
-    setGameOver(false);
-    setWin(false);
-  };
-  
+  }, [ballPos, gameOver, maze]);
+
   return (
-    <div style={{
-      display: 'flex',
-      flexDirection: 'column',
-      alignItems: 'center',
-      justifyContent: 'center',
-      minHeight: '100vh',
-      backgroundColor: '#f0f0f0',
-      padding: '20px'
-    }}>
-      <h1 style={{
-        fontSize: '2rem',
-        fontWeight: 'bold',
-        marginBottom: '20px',
-        color: '#333'
-      }}>Maze Game</h1>
-      
-      <div style={{ display: 'flex', gap: '20px', marginBottom: '10px' }}>
-        <div style={{ display: 'flex', alignItems: 'center' }}>
-          <div style={{
-            width: '15px',
-            height: '15px',
-            backgroundColor: '#4CAF50',
-            marginRight: '5px'
-          }}></div>
-          <span>Start</span>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center' }}>
-          <div style={{
-            width: '15px',
-            height: '15px',
-            backgroundColor: '#F44336',
-            marginRight: '5px'
-          }}></div>
-          <span>End</span>
-        </div>
+    <div className="h-full flex flex-col items-center justify-center font-mono">
+      <div className="mb-8 text-center">
+        <p className="text-xs opacity-50 uppercase tracking-widest mb-1">Pathfinding_Module</p>
+        <h2 className="text-4xl font-black italic">MAZE_RUNNER_v1.0</h2>
       </div>
-      
-      <div ref={mazeRef} style={{
-        position: 'relative',
-        border: '4px solid #333',
-        backgroundColor: 'white',
-        overflow: 'hidden',
-        width: COLS * CELL_SIZE,
-        height: ROWS * CELL_SIZE
-      }}>
-        {/* Render maze */}
-        {maze.map((row, r) =>
-          row.map((cell, c) => (
-            <div
-              key={`${r}-${c}`}
-              style={{
-                position: 'absolute',
-                left: c * CELL_SIZE,
-                top: r * CELL_SIZE,
-                width: CELL_SIZE,
-                height: CELL_SIZE,
-                backgroundColor: cell === WALL ? '#333' : 
-                               cell === START ? '#4CAF50' : 
-                               cell === END ? '#F44336' : 'white'
-              }}
-            />
-          ))
-        )}
-        
-        {/* Render player */}
-        <div style={{
-          position: 'absolute',
-          backgroundColor: '#2196F3',
-          left: ballPos[1] * CELL_SIZE,
-          top: ballPos[0] * CELL_SIZE,
-          width: CELL_SIZE,
-          height: CELL_SIZE,
-          transition: 'left 0.15s ease, top 0.15s ease',
-          zIndex: 10
-        }}/>
-        
-        {/* Game over overlay */}
-        {gameOver && (
-          <div style={{
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            backgroundColor: 'rgba(0,0,0,0.7)',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 20
-          }}>
-            <div style={{
-              color: 'white',
-              fontSize: '1.5rem',
-              fontWeight: 'bold',
-              marginBottom: '20px'
-            }}>
-              {win ? 'You Won! 🎉' : 'Game Over!'}
-            </div>
-            {!win && (
-              <button
-                onClick={resetGame}
-                style={{
-                  padding: '10px 20px',
-                  backgroundColor: '#2196F3',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '5px',
-                  cursor: 'pointer',
-                  fontSize: '1rem'
-                }}
-              >
-                Try Again
-              </button>
+
+      <div 
+        className="grid border-4 border-white bg-white/5" 
+        style={{ gridTemplateColumns: `repeat(${COLS}, 20px)` }}
+      >
+        {maze.map((row, r) => row.map((cell, c) => (
+          <div 
+            key={`${r}-${c}`} 
+            className={`w-5 h-5 ${
+              cell === WALL ? 'bg-white' : 
+              cell === START ? 'bg-blue-500' : 
+              cell === END ? 'bg-green-500' : 'bg-transparent'
+            } relative`}
+          >
+            {ballPos[0] === r && ballPos[1] === c && (
+              <motion.div 
+                layoutId="ball"
+                className="absolute inset-1 bg-red-500 z-10" 
+              />
             )}
           </div>
+        )))}
+      </div>
+
+      <div className="mt-8 text-sm opacity-50 uppercase tracking-tighter">
+        Use_WASD_or_Arrows_to_Navigate
+      </div>
+
+      <AnimatePresence>
+        {gameOver && (
+          <motion.div 
+            initial={{ scale: 0.8, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            className="mt-8 p-4 bg-white text-black font-black text-2xl animate-pulse"
+          >
+            MAZE_BYPASSED
+          </motion.div>
         )}
-      </div>
-      
-      <div style={{ marginTop: '20px', textAlign: 'center' }}>
-        <p style={{ margin: '5px 0', color: '#333' }}>Use arrow keys or WASD to move</p>
-      </div>
-      
-      <button
-        onClick={resetGame}
-        style={{
-          marginTop: '20px',
-          padding: '10px 20px',
-          backgroundColor: '#333',
-          color: 'white',
-          border: 'none',
-          borderRadius: '5px',
-          cursor: 'pointer'
-        }}
-      >
-        New Maze
-      </button>
+      </AnimatePresence>
     </div>
   );
 };

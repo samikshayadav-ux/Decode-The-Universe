@@ -11,7 +11,8 @@ import {
   resetTeamRound,
   unlockRoundForTeam,
   forceAdvanceTeam,
-  getLeaderboard
+  getLeaderboard,
+  unlockRoundGlobally
 } from '../controllers/adminController.js';
 
 const router = express.Router();
@@ -51,6 +52,12 @@ router.put('/rounds/:id/live', setRoundLive);
  * End a round
  */
 router.put('/rounds/:id/end', endRound);
+
+/**
+ * PUT /api/admin/rounds/:id/unlock-all
+ * Unlock a specific round for all teams
+ */
+router.put('/rounds/:id/unlock-all', unlockRoundGlobally);
 
 /**
  * GET /api/admin/teams

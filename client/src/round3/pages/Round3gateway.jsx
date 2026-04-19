@@ -1,118 +1,135 @@
-// src/round1/pages/Round1Gateway.jsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Eye, EyeOff } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { Lock, Play, ArrowLeft, ShieldCheck, Activity, Terminal, Trophy } from 'lucide-react';
 import { useAuth } from '../../auth/AuthContext';
 
-const Round3Gateway = () => {
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
-  
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+
+const FinalRoundGateway = () => {
   const navigate = useNavigate();
-  const { isLoggedIn, authData } = useAuth();
+  const { authData } = useAuth();
+  const [roundStatus, setRoundStatus] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const correctPassword = 'KLE*';
-
-  // Store intended round and handle logged-in users
-  useEffect(() => {
-    if (isLoggedIn && authData) {
-      // Only redirect if already logged in for THIS round (round3)
-      const userRound = authData.allowedRound;
-      const isRound3 = userRound === 'round3' || userRound === 3;
-      
-      if (isRound3) {
-        console.log('User already logged in for round3, redirecting to game');
-        navigate('/round3/game', { replace: true });
+  const fetchRoundInfo = useCallback(async () => {
+    try {
+      const response = await fetch(`${API_URL}/api/gateway/rounds`);
+      if (response.ok) {
+        const rounds = await response.json();
+        const round = rounds.find(r => r.roundNumber === 3);
+        setRoundStatus(round?.status || 'locked');
       }
+    } catch (e) {
+      console.error('Failed to fetch round status:', e);
+      setRoundStatus('locked');
+    } finally {
+      setIsLoading(false);
     }
-  }, [isLoggedIn, authData, navigate]);
+  }, []);
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    setIsLoading(true);
-    setError('');
+  useEffect(() => {
+    fetchRoundInfo();
+    const interval = setInterval(fetchRoundInfo, 10000);
+    return () => clearInterval(interval);
+  }, [fetchRoundInfo]);
 
-    setTimeout(() => {
-      if (password.trim() === correctPassword) {
-        // Redirect to authentication page with round context
-        navigate('/auth', { state: { from: { pathname: '/round3' } } });
-      } else {
-        setError('Invalid key. Try again.');
-        setIsLoading(false);
-      }
-    }, 800);
+  const hasAccess = authData?.unlockedRounds?.includes(3);
+  const isLive = roundStatus === 'live';
+  const isEnded = roundStatus === 'ended';
+
+  const handleEnter = () => {
+    if (isLive && hasAccess) {
+      navigate('/final-round/game');
+    }
   };
 
   return (
-    <div className="min-h-screen bg-gray-950 flex items-center justify-center px-4">
-      {/* Background effects */}
-      <div className="absolute inset-0 bg-gradient-to-br from-gray-900 via-gray-950 to-black"></div>
+    <div className="min-h-screen bg-black text-white font-mono grid-bg p-6 md:p-16 flex flex-col relative overflow-hidden">
+      <div className="scanline" />
       
-      {/* Main card */}
-      <div className="relative z-10 bg-gray-950 border-2 border-gray-600 rounded-xl p-8 w-full max-w-md shadow-2xl">
-        {/* Title */}
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-white mb-2 tracking-tight">
-            ROUND 3
-          </h1>
-          <p className="text-gray-400 text-sm font-mono">
-            Enter Access Key to Continue
-          </p>
+      <div className="flex justify-between items-center z-10 mb-20">
+        <button 
+          onClick={() => navigate('/')} 
+          className="flex items-center gap-2 font-black uppercase text-sm hover:text-accent transition-colors group"
+        >
+          <ArrowLeft size={20} className="group-hover:-translate-x-1 transition-transform" />
+          <span>BACK_TO_TERMINAL</span>
+        </button>
+        
+        <div className="text-right">
+          <div className="text-xs text-white/40 font-bold uppercase tracking-widest">AUTHORIZED_TEAM</div>
+          <div className="text-accent font-black uppercase tracking-tighter">{authData?.teamName || 'GUEST_01'}</div>
         </div>
+      </div>
 
-        {/* Input form */}
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="relative w-full">
-            <input
-              type={showPassword ? 'text' : 'password'}
-              className="w-full p-3 pr-10 border border-gray-800 rounded-md focus:outline-none focus:border-blue-500 text-white font-mono placeholder-gray-600 bg-transparent transition-colors"
-              placeholder="Enter The Access Key"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              disabled={isLoading}
-              autoFocus
-            />
-            <button
-              type="button"
-              onClick={() => setShowPassword((prev) => !prev)}
-              className="absolute right-3 top-1/2 transform -translate-y-1/2 cursor-pointer text-gray-400 hover:text-white transition-colors disabled:opacity-50"
-              disabled={isLoading}
-            >
-              {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
-            </button>
-
-            {error && (
-              <p className="mt-2 text-sm text-red-500 font-mono flex items-center">
-                <span className="text-red-500 mr-1"></span>
-                {error}
-              </p>
-            )}
+      <div className="flex-1 flex flex-col items-start justify-center z-10">
+        <motion.div
+           initial={{ x: -100, opacity: 0 }}
+           animate={{ x: 0, opacity: 1 }}
+           className="space-y-6"
+        >
+          <div className="flex items-center gap-4 text-accent">
+            <Trophy size={32} />
+            <div className="h-px w-24 bg-accent/20" />
+            <div className="text-xs font-black tracking-[0.5em] uppercase">FINAL_SEQUENCE</div>
           </div>
 
-          <button
-            type="submit"
-            disabled={isLoading || !password.trim()}
-            className={`w-full py-3 px-4 rounded-md font-mono font-medium border transition-colors ${
-              isLoading || !password.trim()
-                ? 'border-gray-800 text-gray-500 cursor-not-allowed'
-                : 'border-blue-500 text-blue-500 hover:bg-blue-500/10 active:bg-blue-500/20'
-            }`}
-          >
-            {isLoading ? (
-              <span className="flex items-center justify-center">
-                <span className="animate-pulse mr-2"></span>
-                VERIFYING...
-              </span>
-            ) : (
-              'Unlock'
-            )}
-          </button>
-        </form>
+          <h1 className="text-7xl md:text-9xl font-black tracking-tighter uppercase leading-tight italic">
+            FINAL ROUND
+          </h1>
+
+          <div className="flex flex-wrap gap-4 items-center">
+             <div className={`
+               flex items-center gap-3 px-6 py-2 border-2 font-black text-sm uppercase tracking-widest transition-colors duration-300
+               ${isLive ? 'border-green-500 text-green-500' : isEnded ? 'border-red-500 text-red-500' : 'border-gray-500 text-gray-500'}
+             `}>
+               <Activity size={16} className={isLive ? 'animate-pulse' : ''} />
+               <span>STATUS: {roundStatus?.toUpperCase() || 'UNKNOWN'}</span>
+             </div>
+
+             <div className={`
+               flex items-center gap-3 px-6 py-2 border-2 font-black text-sm uppercase tracking-widest transition-colors duration-300
+               ${hasAccess ? 'border-accent text-accent' : 'border-gray-800 text-gray-800'}
+             `}>
+               <ShieldCheck size={16} />
+               <span>ACCESS: {hasAccess ? 'GRANTED' : 'DENIED'}</span>
+             </div>
+          </div>
+        </motion.div>
+
+        <motion.div 
+           initial={{ y: 50, opacity: 0 }}
+           animate={{ y: 0, opacity: 1 }}
+           transition={{ delay: 0.3 }}
+           className="mt-16 w-full max-w-2xl"
+        >
+           <button
+             onClick={handleEnter}
+             disabled={!isLive || !hasAccess}
+             className={`
+               w-full md:w-auto min-w-[320px] border-4 py-8 px-12 flex items-center justify-between text-3xl font-black uppercase tracking-tighter transition-all duration-150
+               ${isLive && hasAccess 
+                 ? 'border-white hover:bg-white hover:text-black cursor-pointer bg-black' 
+                 : 'border-gray-800 text-gray-800 cursor-not-allowed bg-transparent'}
+             `}
+           >
+             <span>{isLive && hasAccess ? 'INITIALIZE' : isEnded ? 'ROUND_ENDED' : 'LOCKED'}</span>
+             {isLive && hasAccess ? <Play size={32} fill="currentColor" /> : <Lock size={32} />}
+           </button>
+
+           <p className="mt-8 text-white/30 text-[10px] md:text-xs max-w-md uppercase leading-relaxed font-bold tracking-widest">
+             CORE OVERRIDE INITIATED. ALL SYSTEMS CONVERGING. <br />
+             THERE IS NO SECOND PLACE IN THE UNIVERSE.
+           </p>
+        </motion.div>
+      </div>
+
+      <div className="absolute bottom-[-10%] right-[-5%] p-8 opacity-5 hidden lg:block">
+        <Terminal size={500} strokeWidth={1} />
       </div>
     </div>
   );
 };
 
-export default Round3Gateway;
+export default FinalRoundGateway;

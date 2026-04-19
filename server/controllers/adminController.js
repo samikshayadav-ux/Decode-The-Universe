@@ -347,3 +347,37 @@ export const getLeaderboard = async (req, res) => {
     return res.status(500).json({ status: 'error', message: 'Failed to fetch leaderboard' });
   }
 };
+
+/**
+ * Unlock a specific round for all teams
+ */
+export const unlockRoundGlobally = async (req, res) => {
+  try {
+    const { id } = req.params;
+    let round = await Round.findById(id);
+    
+    if (!round) {
+      const roundNumber = parseInt(id);
+      if ([1, 2, 3].includes(roundNumber)) {
+        round = await Round.findOne({ roundNumber });
+      }
+    }
+
+    if (!round) return res.status(404).json({ status: 'error', message: 'Round not found' });
+
+    const roundNumber = round.roundNumber;
+    await Team.updateMany(
+      {}, 
+      { $addToSet: { unlockedRounds: roundNumber } }
+    );
+
+    return res.status(200).json({ 
+      status: 'success', 
+      message: `Round ${roundNumber} unlocked for all teams` 
+    });
+  } catch (error) {
+    console.error(`[Admin Controller] Unlock globally error: ${error.message}`);
+    return res.status(500).json({ status: 'error', message: 'Failed to unlock round globally' });
+  }
+};
+

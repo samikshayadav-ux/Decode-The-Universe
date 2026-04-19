@@ -3,14 +3,14 @@
  * This handles old quiz records that don't have displayTime set
  */
 
-import Round0 from '../models/Round0.js';
+import Round1 from '../models/Round1.js';
 
 export const fixLeaderboardTimes = async () => {
   try {
     console.log('[Fix Leaderboard] Starting to fix old quiz records...');
     
-    // Find all completed Round0 records with missing or zero displayTime
-    const recordsToFix = await Round0.find({
+    // Find all completed Round1 records with missing or zero displayTime
+    const recordsToFix = await Round1.find({
       status: 'completed',
       $or: [
         { displayTime: { $exists: false } },
