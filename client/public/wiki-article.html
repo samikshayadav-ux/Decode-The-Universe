@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Wikiverse — The Curious Tale of the Blue Fox</title>
+  <style>
+    :root {
+      --bg: #f8f9fa;
+      --text: #202122;
+      --muted: #54595d;
+      --link: #0645ad;
+      --border: #a2a9b1;
+      --infobox-bg: #f8f9fa;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; padding: 0; background: var(--bg); color: var(--text);
+      font: 16px/1.6 system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+    }
+    header {
+      border-bottom: 1px solid var(--border);
+      background: white;
+      padding: 12px 16px;
+      display: flex; align-items: center; gap: 12px;
+    }
+    header .logo {
+      width: 36px; height: 36px; border: 1px solid var(--border); border-radius: 50%;
+      display: grid; place-items: center; font-weight: 800; font-size: 14px;
+    }
+    header h1 { font-size: 20px; margin: 0; }
+    main { max-width: 1100px; margin: 24px auto; padding: 0 16px; display: grid; grid-template-columns: 1fr 320px; gap: 24px; }
+    @media (max-width: 900px) {
+      main { grid-template-columns: 1fr; }
+      aside { order: -1; }
+    }
+    .breadcrumbs { font-size: 14px; color: var(--muted); margin-bottom: 8px; }
+    h2 { border-bottom: 1px solid var(--border); padding-bottom: 4px; }
+    p { margin: 0 0 12px; }
+    a { color: var(--link); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    .toc { border: 1px solid var(--border); background: white; padding: 12px; margin: 12px 0; }
+    .infobox {
+      border: 1px solid var(--border); background: var(--infobox-bg); padding: 12px; font-size: 14px;
+    }
+    .infobox h3 { margin: 0 0 8px; text-align: center; }
+    .infobox table { width: 100%; border-collapse: collapse; }
+    .infobox td { border-top: 1px solid var(--border); padding: 6px 4px; vertical-align: top; }
+    .badge {
+      display: inline-block; padding: 2px 6px; border-radius: 4px; background: #eaf3ff; border: 1px solid var(--border); font-family: ui-monospace, Menlo, monospace;
+    }
+    footer { border-top: 1px solid var(--border); margin-top: 24px; padding: 12px 16px; color: var(--muted); font-size: 14px; }
+    .secret {
+      font-family: 'Times New Roman', Times, serif;
+      font-weight: normal;
+      letter-spacing: 0.5px;
+    }
+  </style>
+</head>
+<body>
+   <!-- Key: wiki42-->
+  <header>
+    <div class="logo" aria-hidden="true">W</div>
+    <h1>Wikiverse</h1>
+  </header>
+
+  <main>
+    <article>
+      <div class="breadcrumbs">From Wikiverse, the free encyclopedia</div>
+      <h2>The Curious Tale of the Blue Fox</h2>
+      <p><em>The Curious Tale of the Blue Fox</em> is a folkloric account describing a rare azure canid said to traverse alpine meadows at dawn. Though largely regarded as a modern myth, the story persists in local calendars, postcards, and amateur field notes.</p>
+
+      <div class="toc">
+        <strong>Contents</strong>
+        <ol>
+          <li><a href="#etymology">Etymology</a></li>
+          <li><a href="#description">Description</a></li>
+          <li><a href="#sightings">Reported sightings</a></li>
+          <li><a href="#cultural">Cultural impact</a></li>
+          <li><a href="#references">References</a></li>
+        </ol>
+      </div>
+
+      <h3 id="etymology">Etymology</h3>
+      <p>The phrase "blue fox" likely originated from misidentifications of the Arctic fox's seasonal pelage. In a handful of vernacular glossaries, the term extends to ceramics and textile dyes.</p>
+
+      <h3 id="description">Description</h3>
+      <p>Accounts are inconsistent: some describe a small fox with muted cobalt fur; others, a silvered coat that reflects the twilight like water. No specimen has been recovered.</p>
+
+      <h3 id="sightings">Reported sightings</h3>
+      <p>Notable claims trace back to ridge-walkers who report a brief flash of color across scree slopes. The phenomenon may be an artifact of light and distance. One hiker's journal entry from 2014 reads: "Yesterday at dawn, I saw what appeared to be a blue fox near the eastern ridge. The creature moved with such grace that it seemed to defy physics, vanishing after exactly <span class="secret">42</span> seconds."</p>
+
+      <h3 id="cultural">Cultural impact</h3>
+      <p>Local crafts, songs, and souvenir patches feature the blue fox motif. A children's picture book series called <span class="secret">WIKI</span>'s <em>Blue Fox Adventures</em> popularized the character in the mid-2010s.</p>
+
+      <h3 id="references">References</h3>
+      <p>1. Meadow, L. (2016). <em>Alpine Whispers</em>. Field Press. 2. Ridgeway, T. (2019). <em>Twilight Fauna</em>. Northbank.</p>
+    </article>
+
+    <aside>
+      <div class="infobox" role="complementary" aria-label="Quick facts">
+        <h3>Quick facts</h3>
+        <table>
+          <tr><td><strong>Status</strong></td><td>Legendary</td></tr>
+          <tr><td><strong>Habitat</strong></td><td>Alpine meadows</td></tr>
+          <tr><td><strong>First mention</strong></td><td>Early 20th century</td></tr>
+          <tr><td><strong>Folklore type</strong></td><td>Cryptid</td></tr>
+        </table>
+      </div>
+    </aside>
+  </main>
+
+  <footer>
+    Look at the text carefully, there is a secret key hidden in the article. Inspecting the page might help you<br>
+  </footer>
+</body>
+</html>

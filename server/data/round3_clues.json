@@ -1,0 +1,97 @@
+[
+  {
+    "clue_id": 1,
+    "clue": "Look near the main entrance fountain",
+    "code": "ABCE1234",
+    "type": "text"
+  },
+  {
+    "clue_id": 2,
+    "clue": "Check under the cafeteria's third table",
+    "code": "XYZW5678",
+    "type": "text"
+  },
+  {
+    "clue_id": 3,
+    "clue": "Scan the historical marker near the library",
+    "code": "MNOP9012",
+    "type": "text"
+  },
+  {
+    "clue_id": 4,
+    "clue": "What building is shown",
+    "code": "QRST3456",
+    "type": "image",
+    "image_url": "https://www.kletech.ac.in/belagavi/images/overview-img1.jpg"
+  },
+  {
+    "clue_id": 5,
+    "clue": "Top shelf of the science building",
+    "code": "UVWX7890",
+    "type": "text"
+  },
+  {
+    "clue_id": 6,
+    "clue": "Identify this campus landmark",
+    "code": "CDEF2345",
+    "type": "image",
+    "image_url": "https://www.kletech.ac.in/belagavi/images/overview-img1.jpg"
+  },
+  {
+    "clue_id": 7,
+    "clue": "Under the bench near the admin building",
+    "code": "GHIJ6789",
+    "type": "text"
+  },
+  {
+    "clue_id": 8,
+    "clue": "What year is shown on this plaque?",
+    "code": "KLMN0123",
+    "type": "image",
+    "image_url": "https://www.kletech.ac.in/belagavi/images/overview-img1.jpg"
+  },
+  {
+    "clue_id": 9,
+    "clue": "In the flower bed",
+    "code": "OPQR4567",
+    "type": "text"
+  },
+  {
+    "clue_id": 10,
+    "clue": "Attached to the vending machine in the lounge",
+    "code": "STUV8901",
+    "type": "text"
+  },
+  {
+    "clue_id": 11,
+    "clue": "Under the welcome mat at the student center",
+    "code": "WXYZ2345",
+    "type": "text"
+  },
+  {
+    "clue_id": 12,
+    "clue": "Which room?",
+    "code": "ABCD6789",
+    "type": "image",
+    "image_url": "https://www.kletech.ac.in/belagavi/images/overview-img1.jpg"
+  },
+  {
+    "clue_id": 13,
+    "clue": "Inside the mailbox near the parking lot",
+    "code": "EFGH0123",
+    "type": "text"
+  },
+  {
+    "clue_id": 14,
+    "clue": "Under the clock tower's first step",
+    "code": "IJKL4567",
+    "type": "text"
+  },
+  {
+    "clue_id": 15,
+    "clue": "Whose portrait this?",
+    "code": "MNOP8901",
+    "type": "image",
+    "image_url": "https://www.kletech.ac.in/belagavi/images/overview-img1.jpg"
+  }
+]
