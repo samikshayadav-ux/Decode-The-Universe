@@ -19,9 +19,6 @@ const roundSchema = new mongoose.Schema(
       type: String,
       required: true
     },
-    displayName: {
-      type: String
-    },
     description: {
       type: String
     },
@@ -79,6 +76,8 @@ roundSchema.pre('save', async function (next) {
 
 // Static methods
 roundSchema.statics.setLive = async function (roundNumber) {
+  if (![1, 2, 3].includes(roundNumber)) throw new Error('Invalid round number');
+  
   // End all other live rounds
   await this.updateMany(
     { status: 'live', roundNumber: { $ne: roundNumber } },
@@ -96,6 +95,8 @@ roundSchema.statics.setLive = async function (roundNumber) {
 };
 
 roundSchema.statics.endRound = async function (roundNumber) {
+  if (![1, 2, 3].includes(roundNumber)) throw new Error('Invalid round number');
+
   const round = await this.findOneAndUpdate(
     { roundNumber },
     { status: 'ended', endedAt: new Date() },
@@ -110,7 +111,7 @@ roundSchema.statics.getLiveRound = async function () {
 };
 
 roundSchema.statics.getAllRounds = async function () {
-  return await this.find().sort({ roundNumber: 1 });
+  return await this.find({ roundNumber: { $in: [1, 2, 3] } }).sort({ roundNumber: 1 });
 };
 
 const Round = mongoose.model('Round', roundSchema);

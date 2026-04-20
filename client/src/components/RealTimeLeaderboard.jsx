@@ -1,13 +1,11 @@
 import React, { useEffect, useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Activity, Trophy, Clock, Target, AlertCircle } from 'lucide-react';
 import { useLeaderboard } from '../contexts/LeaderboardContext';
 
 /**
- * Enhanced Real-Time Leaderboard Component with Brutalist Design
+ * Example Real-Time Leaderboard Component
+ * Demonstrates how to use the useLeaderboard hook for real-time updates
  */
-export function RealTimeLeaderboard({ teamId = null }) {
-  const [activeRound, setActiveRound] = useState(1);
+export function RealTimeLeaderboard({ roundNumber = 1, teamId = null }) {
   const {
     isConnected,
     getLeaderboard,
@@ -18,164 +16,191 @@ export function RealTimeLeaderboard({ teamId = null }) {
     error
   } = useLeaderboard();
 
-  const leaderboard = getLeaderboard(activeRound);
-  const userRank = teamId ? getTeamRank(teamId, activeRound) : null;
-  const userScore = teamId ? getTeamScore(teamId, activeRound) : null;
+  const [autoRefresh, setAutoRefresh] = useState(true);
+  const leaderboard = getLeaderboard(roundNumber);
+  const userRank = teamId ? getTeamRank(teamId, roundNumber) : null;
+  const userScore = teamId ? getTeamScore(teamId, roundNumber) : null;
 
-  // Join active round room
+  // Join round on mount, leave on unmount
   useEffect(() => {
-    enterRound(activeRound);
-    return () => exitRound(activeRound);
-  }, [activeRound, enterRound, exitRound]);
+    enterRound(roundNumber);
+    return () => exitRound(roundNumber);
+  }, [roundNumber, enterRound, exitRound]);
+
+  // Connection status indicator
+  const getStatusBadge = () => {
+    if (!isConnected) {
+      return <span className="badge badge-error">Offline</span>;
+    }
+    return <span className="badge badge-success">Live</span>;
+  };
 
   // Format time display
   const formatTime = (seconds) => {
-    if (!seconds && seconds !== 0) return '--:--';
     const mins = Math.floor(seconds / 60);
-    const secs = Math.floor(seconds % 60);
+    const secs = seconds % 60;
     return `${mins}m ${secs}s`;
   };
 
-  const rounds = [
-    { id: 1, label: 'ROUND 1' },
-    { id: 2, label: 'ROUND 2' },
-    { id: 3, label: 'FINAL ROUND' }
-  ];
-
   return (
-    <div className="bg-black border-4 border-white font-mono text-white p-6 md:p-8">
+    <div className="leaderboard-container">
       {/* Header */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 mb-8 border-b-2 border-white/20 pb-6">
-        <div>
-          <h2 className="text-3xl font-black italic uppercase tracking-tighter">
-            LIVE_LEADER<span className="text-accent underline">BOARD</span>
+      <div className="leaderboard-header">
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-2xl font-bold">
+            Round {roundNumber} Leaderboard
           </h2>
-          <p className="text-[10px] text-white/50 font-bold tracking-[0.3em] mt-1">REAL_TIME_SYNC_ENABLED</p>
+          <div className="flex gap-2 items-center">
+            {getStatusBadge()}
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={autoRefresh}
+                onChange={(e) => setAutoRefresh(e.target.checked)}
+                className="checkbox checkbox-sm"
+              />
+              <span className="text-sm">Auto-update</span>
+            </label>
+          </div>
         </div>
 
-        <div className="flex items-center gap-4">
-          {isConnected ? (
-            <div className="flex items-center gap-2 border-2 border-green-500 px-3 py-1 bg-green-500/10">
-              <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-              <span className="text-green-500 text-xs font-black tracking-widest">LIVE</span>
+        {/* User Stats */}
+        {teamId && (
+          <div className="stats shadow mb-4 w-full">
+            <div className="stat">
+              <div className="stat-title">Your Rank</div>
+              <div className="stat-value text-primary">
+                {userRank ? `#${userRank}` : '—'}
+              </div>
             </div>
-          ) : (
-            <div className="flex items-center gap-2 border-2 border-red-500 px-3 py-1 bg-red-500/10">
-              <div className="w-2 h-2 bg-red-400 rounded-full" />
-              <span className="text-red-400 text-xs font-black tracking-widest">OFFLINE</span>
+            <div className="stat">
+              <div className="stat-title">Your Score</div>
+              <div className="stat-value text-secondary">
+                {userScore !== null ? userScore : '—'}
+              </div>
             </div>
-          )}
-        </div>
+            <div className="stat">
+              <div className="stat-title">Teams Ranked</div>
+              <div className="stat-value">{leaderboard.length}</div>
+            </div>
+          </div>
+        )}
+
+        {/* Error Message */}
+        {error && (
+          <div className="alert alert-error mb-4">
+            <span>{error}</span>
+          </div>
+        )}
       </div>
 
-      {/* Round Tabs */}
-      <div className="flex flex-wrap gap-2 mb-8">
-        {rounds.map((r) => (
-          <button
-            key={r.id}
-            onClick={() => setActiveRound(r.id)}
-            className={`
-              px-4 py-2 border-2 font-black text-xs transition-all duration-150
-              ${activeRound === r.id 
-                ? 'bg-white text-black border-white' 
-                : 'border-white/20 hover:border-white'}
-            `}
-          >
-            {r.label}
-          </button>
-        ))}
-      </div>
-
-      {/* Team Specific Stats (If logged in) */}
-      {teamId && (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-0 border-4 border-white mb-8">
-          <div className="p-6 border-b-4 md:border-b-0 md:border-r-4 border-white">
-            <p className="text-[10px] font-black tracking-widest opacity-50 uppercase mb-2">YOUR_POSITION</p>
-            <p className="text-4xl font-black text-yellow-400 italic">#{userRank || '--'}</p>
-          </div>
-          <div className="p-6 border-b-4 md:border-b-0 md:border-r-4 border-white bg-white text-black">
-            <p className="text-[10px] font-black tracking-widest opacity-50 uppercase mb-2">CURRENT_SCORE</p>
-            <p className="text-4xl font-black italic">{userScore !== null ? userScore.toString().padStart(3, '0') : '000'}</p>
-          </div>
-          <div className="p-6">
-            <p className="text-[10px] font-black tracking-widest opacity-50 uppercase mb-2">TOTAL_PARTICIPANTS</p>
-            <p className="text-4xl font-black italic">{leaderboard.length.toString().padStart(2, '0')}</p>
-          </div>
-        </div>
-      )}
-
-      {/* Error Alert */}
-      {error && (
-        <div className="bg-red-500/20 border-2 border-red-500 p-4 mb-6 flex items-center gap-3">
-          <AlertCircle className="text-red-500" size={20} />
-          <span className="text-xs font-black text-red-500 uppercase">SIGNAL_INTERFERENCE: {error}</span>
+      {/* Loading State */}
+      {leaderboard.length === 0 && isConnected && (
+        <div className="text-center py-8">
+          <p className="text-gray-500">No teams in leaderboard yet...</p>
         </div>
       )}
 
       {/* Leaderboard Table */}
-      <div className="border-4 border-white overflow-hidden">
+      {leaderboard.length > 0 && (
         <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse min-w-[600px]">
+          <table className="table table-zebra w-full">
             <thead>
-              <tr className="bg-white/5 border-b-2 border-white">
-                <th className="p-4 text-[10px] font-black tracking-[0.2em] uppercase border-r-2 border-white w-16">RANK</th>
-                <th className="p-4 text-[10px] font-black tracking-[0.2em] uppercase border-r-2 border-white">TEAM_IDENTIFIER</th>
-                <th className="p-4 text-[10px] font-black tracking-[0.2em] uppercase border-r-2 border-white w-24">SCORE</th>
-                <th className="p-4 text-[10px] font-black tracking-[0.2em] uppercase w-32">TIME_TAKEN</th>
+              <tr className="bg-base-200">
+                <th className="w-12">Rank</th>
+                <th>Team Name</th>
+                <th className="text-right">Score</th>
+                <th className="text-right">Time Spent</th>
+                <th className="text-center">Questions</th>
+                <th className="text-center">Status</th>
               </tr>
             </thead>
             <tbody>
-              <AnimatePresence mode="popLayout">
-                {leaderboard.length > 0 ? (
-                  leaderboard.slice(0, 10).map((entry, idx) => (
-                    <motion.tr
-                      layout
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      key={entry.teamId}
-                      className={`
-                        border-b border-white/10 hover:bg-white/5 transition-colors
-                        ${teamId === entry.teamId ? 'bg-accent/10 border-l-4 border-l-accent' : ''}
-                        ${idx === 0 ? 'bg-yellow-400/5' : ''}
-                      `}
+              {leaderboard.map((entry, idx) => (
+                <tr
+                  key={entry.teamId}
+                  className={
+                    teamId === entry.teamId
+                      ? 'bg-primary bg-opacity-20 font-bold'
+                      : idx === 0
+                      ? 'bg-warning bg-opacity-10'
+                      : ''
+                  }
+                >
+                  <td>
+                    <div className="flex items-center justify-center">
+                      {entry.rank === 1 && <span className="text-xl">🥇</span>}
+                      {entry.rank === 2 && <span className="text-xl">🥈</span>}
+                      {entry.rank === 3 && <span className="text-xl">🥉</span>}
+                      {entry.rank > 3 && (
+                        <span className="font-bold">#{entry.rank}</span>
+                      )}
+                    </div>
+                  </td>
+                  <td className="font-semibold">{entry.teamName}</td>
+                  <td className="text-right">
+                    <span className="badge badge-lg badge-primary">
+                      {entry.score}
+                    </span>
+                  </td>
+                  <td className="text-right text-sm">
+                    {formatTime(entry.totalTimeSpent)}
+                  </td>
+                  <td className="text-center">
+                    {entry.questionsAnswered}/{entry.totalQuestions}
+                  </td>
+                  <td className="text-center">
+                    <span
+                      className={`badge ${
+                        entry.status === 'completed'
+                          ? 'badge-success'
+                          : entry.status === 'in_progress'
+                          ? 'badge-info'
+                          : 'badge-ghost'
+                      }`}
                     >
-                      <td className="p-4 border-r-2 border-white font-black italic text-xl">
-                        {(idx + 1).toString().padStart(2, '0')}
-                      </td>
-                      <td className="p-4 border-r-2 border-white">
-                        <div className="flex items-center justify-between">
-                          <span className="font-black uppercase tracking-tight">{entry.teamName}</span>
-                          {entry.status === 'completed' && (
-                            <span className="text-[8px] bg-green-500 text-black px-1 font-black">FINISHED</span>
-                          )}
-                        </div>
-                      </td>
-                      <td className="p-4 border-r-2 border-white font-black text-xl text-accent text-center">
-                        {entry.score}
-                      </td>
-                      <td className="p-4 font-black tabular-nums text-sm">
-                        {formatTime(entry.totalTimeSpent)}
-                      </td>
-                    </motion.tr>
-                  ))
-                ) : (
-                  <tr>
-                    <td colSpan="4" className="p-16 text-center">
-                      <span className="text-[10px] font-black tracking-[0.4em] uppercase opacity-20 italic">
-                        {isConnected ? 'awaiting_data_sequence...' : 'link_offline'}
-                      </span>
-                    </td>
-                  </tr>
-                )}
-              </AnimatePresence>
+                      {entry.status === 'completed' && '✓ Done'}
+                      {entry.status === 'in_progress' && '⏳ Active'}
+                      {entry.status === 'not_started' && '○ Waiting'}
+                    </span>
+                  </td>
+                </tr>
+              ))}
             </tbody>
           </table>
         </div>
-      </div>
-      
-      <div className="mt-6 flex justify-between items-center opacity-40">
-        <p className="text-[9px] font-black uppercase tracking-widest">TOP_10_RECORDS_DISPLAYED</p>
-        <p className="text-[9px] font-black uppercase tracking-widest">[ DECODE_SEQUENCE_V.1.04 ]</p>
+      )}
+
+      {/* Connection Status Message */}
+      {!isConnected && (
+        <div className="alert alert-warning mt-4">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            className="stroke-current shrink-0 h-6 w-6"
+            fill="none"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M12 9v2m0 4v2m0 4v2M4.707 7.293a1 1 0 00-.707 1.414l1.414 1.414a1 1 0 101.414-1.414L4.707 7.293zm1.414 10L4 18.707a1 1 0 101.414 1.414l1.414-1.414a1 1 0 00-1.414-1.414zm10-10l1.414-1.414a1 1 0 10-1.414-1.414L14.293 4.707a1 1 0 001.414 1.414zm1.414 10l1.414 1.414a1 1 0 101.414-1.414l-1.414-1.414a1 1 0 00-1.414 1.414z"
+            />
+          </svg>
+          <span>
+            Connecting to server for real-time updates... This may take a
+            moment.
+          </span>
+        </div>
+      )}
+
+      {/* Last Updated */}
+      <div className="mt-4 text-xs text-gray-500">
+        {isConnected ? (
+          <span>✓ Real-time updates enabled</span>
+        ) : (
+          <span>○ Awaiting connection...</span>
+        )}
       </div>
     </div>
   );
@@ -189,29 +214,31 @@ export function CompactLeaderboard({ roundNumber = 1, limit = 5 }) {
   const leaderboard = getLeaderboard(roundNumber).slice(0, limit);
 
   return (
-    <div className="bg-black border-4 border-white font-mono text-white p-4">
-      <div className="flex justify-between items-center mb-4">
-        <h3 className="text-sm font-black uppercase tracking-tighter">ROUND_{roundNumber}_TOP</h3>
-        {isConnected && <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse" />}
-      </div>
-      <div className="space-y-2">
-        {leaderboard.length === 0 ? (
-          <div className="h-20 flex items-center justify-center border-2 border-white/10 italic text-[10px] opacity-20 uppercase font-black">
-            SYNCING...
-          </div>
-        ) : (
-          leaderboard.map((entry, idx) => (
-            <div
-              key={entry.teamId}
-              className="flex justify-between items-center p-2 border-2 border-white/20 hover:border-white transition-colors"
-            >
-              <div className="flex items-center gap-3">
-                <span className="font-black italic text-yellow-400">#{idx + 1}</span>
-                <span className="text-[10px] font-black uppercase tracking-tighter truncate max-w-[100px]">{entry.teamName}</span>
+    <div className="card bg-base-100 shadow-xl">
+      <div className="card-body p-4">
+        <h3 className="card-title text-lg mb-2">
+          Top {limit} - Round {roundNumber}
+        </h3>
+        <div className="space-y-2">
+          {leaderboard.length === 0 ? (
+            <p className="text-sm text-gray-500">Loading...</p>
+          ) : (
+            leaderboard.map((entry) => (
+              <div
+                key={entry.teamId}
+                className="flex justify-between items-center p-2 bg-base-200 rounded"
+              >
+                <div className="flex items-center gap-2">
+                  <span className="font-bold w-6">#{entry.rank}</span>
+                  <span className="text-sm">{entry.teamName}</span>
+                </div>
+                <span className="font-bold text-primary">{entry.score}</span>
               </div>
-              <span className="text-sm font-black text-accent">{entry.score}</span>
-            </div>
-          ))
+            ))
+          )}
+        </div>
+        {isConnected && (
+          <p className="text-xs text-success mt-2">● Live Updates</p>
         )}
       </div>
     </div>
@@ -222,32 +249,86 @@ export function CompactLeaderboard({ roundNumber = 1, limit = 5 }) {
  * Leaderboard Stats Component
  */
 export function LeaderboardStats({ roundNumber = 1 }) {
-  const { getLeaderboard } = useLeaderboard();
+  const { isConnected, getLeaderboard } = useLeaderboard();
   const leaderboard = getLeaderboard(roundNumber);
 
   const stats = {
     totalTeams: leaderboard.length,
-    maxScore: leaderboard.length > 0 ? Math.max(...leaderboard.map((t) => t.score)) : 0,
+    maxScore:
+      leaderboard.length > 0
+        ? Math.max(...leaderboard.map((t) => t.score))
+        : 0,
+    avgScore:
+      leaderboard.length > 0
+        ? Math.floor(
+            leaderboard.reduce((sum, t) => sum + t.score, 0) /
+              leaderboard.length
+          )
+        : 0,
     completed: leaderboard.filter((t) => t.status === 'completed').length
   };
 
   return (
-    <div className="grid grid-cols-3 border-4 border-white font-mono text-white overflow-hidden bg-black">
-      <div className="p-4 border-r-2 border-white flex flex-col items-center">
-        <span className="text-[8px] font-black opacity-40 mb-1">TEAMS</span>
-        <span className="text-xl font-black italic">{stats.totalTeams.toString().padStart(2, '0')}</span>
+    <div className="stats shadow w-full">
+      <div className="stat">
+        <div className="stat-figure text-primary">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+            className="inline-block w-8 h-8 stroke-current"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M13 10V3L4 14h7v7l9-11h-7z"
+            />
+          </svg>
+        </div>
+        <div className="stat-title">Total Teams</div>
+        <div className="stat-value text-primary">{stats.totalTeams}</div>
       </div>
-      <div className="p-4 border-r-2 border-white flex flex-col items-center bg-white text-black">
-        <span className="text-[8px] font-black opacity-40 mb-1 text-black/50">MAX_SCR</span>
-        <span className="text-xl font-black italic">{stats.maxScore.toString().padStart(3, '0')}</span>
+
+      <div className="stat">
+        <div className="stat-figure text-secondary">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+            className="inline-block w-8 h-8 stroke-current"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"
+            />
+          </svg>
+        </div>
+        <div className="stat-title">Max Score</div>
+        <div className="stat-value text-secondary">{stats.maxScore}</div>
       </div>
-      <div className="p-4 flex flex-col items-center">
-        <span className="text-[8px] font-black opacity-40 mb-1">DONE</span>
-        <span className="text-xl font-black italic">{stats.completed.toString().padStart(2, '0')}</span>
+
+      <div className="stat">
+        <div className="stat-figure text-accent">
+          <div className="avatar placeholder">
+            <div className="bg-accent text-accent-content rounded-full w-10 text-xl">
+              ✓
+            </div>
+          </div>
+        </div>
+        <div className="stat-title">Completed</div>
+        <div className="stat-value">{stats.completed}</div>
+      </div>
+
+      <div className="stat">
+        <div className="stat-figure text-info">📊</div>
+        <div className="stat-title">Avg Score</div>
+        <div className="stat-value text-info">{stats.avgScore}</div>
       </div>
     </div>
   );
 }
 
 export default RealTimeLeaderboard;
-

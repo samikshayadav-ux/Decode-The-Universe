@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { initializeSocket, joinRound, leaveRound, subscribeToLeaderboard, subscribeToScoreChanges, disconnectSocket } from './../../utils/socketClient';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-const ROUND_NUMBER = 1;
+const ROUND_NUMBER = 2;
 
 const formatTime = (seconds) => {
   if (!seconds && seconds !== 0) return '--:--';
@@ -246,7 +246,7 @@ const LiveLeaderboard = () => {
         <div className="flex justify-between items-center mb-8">
           <div>
             <h1 className="text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-green-400 to-blue-500">
-              🏆 Round 1 - Live Leaderboard
+              🏆 Round 2 - Live Leaderboard
             </h1>
             {connected && <p className="text-sm text-green-400 mt-2">● Connected</p>}
             {error && <p className="text-sm text-red-400 mt-2">⚠ {error}</p>}

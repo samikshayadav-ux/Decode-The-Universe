@@ -1,76 +1,155 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { Eye, EyeOff } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { motion } from 'framer-motion';
 import { useAuth } from './AuthContext';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
 const Login = () => {
-  const [formData, setFormData] = useState({ teamId: '', password: '' });
+  const [teamId, setTeamId] = useState('');
+  const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
-
+  const [success, setSuccess] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  
   const navigate = useNavigate();
   const location = useLocation();
-  const { login } = useAuth();
-  const from = location.state?.from?.pathname || '/';
+  const { login, isLoggedIn, authData } = useAuth();
 
-  const submit = async (e) => {
+  // Get intended round from gateway state
+  const getIntendedRound = () => {
+    const fromPath = location.state?.from?.pathname;
+    if (fromPath) {
+      const segments = fromPath.split('/').filter(Boolean);
+      const round = segments.find(seg => seg.startsWith('round'));
+      if (round) return round;
+    }
+    return null;
+  };
+
+  // Redirect if already logged in for THIS round
+  useEffect(() => {
+    const round = getIntendedRound();
+    if (isLoggedIn && authData?.allowedRound === round) {
+      navigate(location.state?.from?.pathname || `/${round}/game`, { replace: true });
+    }
+  }, [isLoggedIn, authData?.allowedRound, location.state?.from?.pathname, navigate]);
+
+  const handleLogin = async (e) => {
     e.preventDefault();
-    setLoading(true);
     setError('');
+    setSuccess('');
+    setIsLoading(true);
+
     try {
-      const res = await fetch(`${API_URL}/api/auth/login`, {
+      const intendedRound = getIntendedRound();
+      if (!intendedRound) {
+        throw new Error('Invalid access: missing round context');
+      }
+
+      const response = await fetch(`${API_URL}/api/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData)
+        body: JSON.stringify({ teamId, password })
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message || 'AUTH_ERR');
-      login(data.team, data.token);
-      navigate(from, { replace: true });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Login failed');
+      }
+
+      // Simple login: just store credentials in sessionStorage
+      login({
+        teamId: data.team.teamId,
+        teamName: data.team.teamName
+      }, data.token, intendedRound);
+
+      setSuccess('Login successful!');
+      
+      setTimeout(() => {
+        const roundPath = location.state?.from?.pathname || `/${intendedRound}`;
+        navigate(`${roundPath}/game`, { replace: true });
+      }, 500);
+
     } catch (err) {
-      setError(err.message);
+      console.error('Login error:', err);
+      setError(err.message || 'Login failed');
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   };
 
   return (
-    <form onSubmit={submit} className="space-y-12">
-      {error && <div className="text-red-500 text-[10px] font-black uppercase tracking-widest">{error}</div>}
-      
-      <div className="space-y-2">
-        <label className="text-[10px] font-black uppercase tracking-[0.4em] opacity-40">Team ID</label>
-        <input
-          value={formData.teamId}
-          onChange={(e) => setFormData({...formData, teamId: e.target.value})}
-          required
-          className="w-full bg-transparent border-b border-white/20 py-4 text-3xl font-black uppercase focus:outline-none focus:border-accent transition-all"
-          placeholder="IDENTITY"
-        />
+    <div className="w-full max-w-md mx-auto">
+      <div className="text-center mb-6">
+        <h2 className="text-2xl font-mono text-white mb-2">LOGIN</h2>
+        <div className="text-gray-400 font-mono text-sm">Enter your credentials</div>
       </div>
 
-      <div className="space-y-2">
-        <label className="text-[10px] font-black uppercase tracking-[0.4em] opacity-40">Access Key</label>
-        <input
-          type="password"
-          value={formData.password}
-          onChange={(e) => setFormData({...formData, password: e.target.value})}
-          required
-          className="w-full bg-transparent border-b border-white/20 py-4 text-3xl font-black focus:outline-none focus:border-accent transition-all"
-          placeholder="••••••••"
-        />
-      </div>
+      <form onSubmit={handleLogin} className="space-y-4">
+        {error && (
+          <div className="p-3 bg-red-900/30 border border-red-700 text-red-400 rounded-lg text-sm font-mono">
+            {error}
+          </div>
+        )}
 
-      <button
-        type="submit"
-        disabled={loading}
-        className="neo-button w-full"
-      >
-        {loading ? 'SYNCING...' : 'LOGIN'}
-      </button>
-    </form>
+        {success && (
+          <div className="p-3 bg-green-900/20 border border-green-700 text-green-400 rounded-lg text-sm font-mono">
+            {success}
+          </div>
+        )}
+
+        <div>
+          <label className="block text-gray-400 font-mono text-xs mb-1">TEAM ID*</label>
+          <input
+            type="text"
+            value={teamId}
+            onChange={(e) => setTeamId(e.target.value)}
+            placeholder="Enter your Team ID"
+            className="w-full p-3 rounded-lg bg-black border border-gray-800 text-white font-mono placeholder-gray-600 focus:border-blue-500 focus:outline-none"
+            required
+            disabled={isLoading}
+          />
+        </div>
+
+        <div>
+          <label className="block text-gray-400 font-mono text-xs mb-1">PASSWORD*</label>
+          <div className="relative">
+            <input
+              type={showPassword ? 'text' : 'password'}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Enter your password"
+              className="w-full p-3 pr-10 rounded-lg bg-black border border-gray-800 text-white font-mono placeholder-gray-600 focus:border-blue-500 focus:outline-none"
+              required
+              disabled={isLoading}
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-white disabled:opacity-50"
+              disabled={isLoading}
+            >
+              {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+            </button>
+          </div>
+        </div>
+
+        <button
+          type="submit"
+          disabled={isLoading}
+          className={`w-full py-3 rounded-lg border font-mono transition-colors ${
+            isLoading
+              ? 'border-gray-600 text-gray-500 cursor-not-allowed'
+              : 'border-blue-500 text-blue-500 hover:bg-blue-500/10 active:bg-blue-500/20'
+          }`}
+        >
+          {isLoading ? 'AUTHENTICATING...' : 'LOGIN'}
+        </button>
+      </form>
+    </div>
   );
 };
 

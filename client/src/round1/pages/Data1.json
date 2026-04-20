@@ -1,82 +1,32 @@
 [
   {
     "id": 1,
-    "question": "Who is this person?",
-    "img": "https://upload.wikimedia.org/wikipedia/commons/3/34/Elon_Musk_Royal_Society_%28crop2%29.jpg",
-    "answer": ["elon", "elon musk"],
-    "type": "person"
+    "question": "What is the capital of France?",
+    "options": ["Berlin", "Madrid", "Paris", "Rome"],
+    "answer": "Paris"
   },
   {
     "id": 2,
-    "question": "Which country's flag is this?",
-    "img": "https://upload.wikimedia.org/wikipedia/en/a/ae/Flag_of_the_United_Kingdom.svg",
-    "answer": ["uk", "united kingdom", "britain", "england"],
-    "type": "flag"
+    "question": "Which planet is known as the Red Planet?",
+    "options": ["Earth", "Mars", "Jupiter", "Saturn"],
+    "answer": "Mars"
   },
   {
     "id": 3,
-    "question": "Name this brand logo",
-    "img": "https://upload.wikimedia.org/wikipedia/commons/b/bd/Tesla_Motors.svg",
-    "answer": ["tesla"],
-    "type": "logo"
+    "question": "Who wrote 'Hamlet'?",
+    "options": ["Charles Dickens", "William Shakespeare", "Mark Twain", "Jane Austen"],
+    "answer": "William Shakespeare"
   },
   {
     "id": 4,
-    "question": "What gets wetter the more it dries?",
-    "answer": ["towel", "a towel"],
-    "type": "riddle"
+    "question": "What is the largest ocean on Earth?",
+    "options": ["Atlantic Ocean", "Indian Ocean", "Arctic Ocean", "Pacific Ocean"],
+    "answer": "Pacific Ocean"
   },
   {
     "id": 5,
-    "question": "Decode this binary message:",
-    "code": "01010111 01101001 01101110 01100111 01100001 01110010 01100100 01101001 01110101 01101101",
-    "answer": ["test"],
-    "type": "binary"
-  },
-  {
-    "id": 6,
-    "question": "Translate to English:",
-    "text": "こんにちは",
-    "answer": ["hello", "hi"],
-    "type": "translation"
-  },
-  {
-    "id": 7,
-    "question": "A subtle phenomenon appeared briefly, seen by only a few. What was it?",
-    "type": "paragraph",
-    "passage": "The festival grounds stretched far and wide across the open fields of Brooksville, a sleepy town that came alive just once every summer. Lanterns hung from ropes strung between ancient oaks, casting a soft golden glow that flickered in the early evening light. The smell of roasted corn and sugared almonds floated through the air, mingling with the distant hum of folk music. A juggler near the west gate kept children in awe while older folks sat on picnic blankets, sipping sweet tea and watching the clouds change color.\n\nVendors called out their specials — hand-woven charms, brass trinkets, herbal soaps — each stall offering a piece of something old, something local. At the edge of the square, a man with silver hair played a haunting melody on a violin, drawing a small circle of quiet around him. Just beyond that, in the quieter part of the park, a young woman sat with a sketchpad, her eyes shifting between the sky and the page, as if trying to capture something too delicate to name.\n\nAs twilight deepened, the crowd's energy softened. The laughter grew lower, conversations quieter, like a collective breath had been drawn. The sky, still partly lit, began to reflect soft hues — not just blue and orange, but faint hints of violet, pink, and something else entirely. Only a few people noticed it: a slow, elegant arch barely visible against the fading light, stretching silently above the rooftops. No announcements were made, no fingers pointed — just a moment of quiet wonder that passed almost as quickly as it arrived.\n\nLater, when asked what she had seen, the sketching woman would only smile and say, \"Not everything needs to be captured.\" But her drawing would show a faint curve of color reaching across the sky — subtle, soft, and complete.\n\nSome things aren't made to last. Some things only appear when you're not looking directly. But if you saw it — truly saw it — you would know the word.",
-    "answer": ["rainbow"]
-  },
-  {
-    "id": 8,
-    "question": "Identify the element with these properties:",
-    "properties": [
-      { "label": "Atomic Mass", "value": "15.999 u" },
-      { "label": "Group", "value": "16" },
-      { "label": "Melting Point", "value": "-218.79°C" }
-    ],
-    "answer": ["oxygen"],
-    "type": "science"
-  },
-  {
-    "id": 9,
-    "question": "Whose Instagram profile has these stats?",
-    "stats": [
-      { "label": "Posts", "value": "3,921" },
-      { "label": "Followers", "value": "661M" },
-      { "label": "Following", "value": "605" }
-    ],
-    "answer": ["cristiano", "cristiano ronaldo"],
-    "type": "instagram"
-  },
-  {
-    "id": 10,
-    "question": "From this YouTube moment:",
-    "details": [
-      "TMKOC EP 1228 — 12:28",
-      "22:10 • 582K views • 2 Years Ago"
-    ],
-    "answer": ["tapu sena"],
-    "type": "youtube"
+    "question": "Which element has the chemical symbol 'O'?",
+    "options": ["Gold", "Oxygen", "Silver", "Iron"],
+    "answer": "Oxygen"
   }
 ]

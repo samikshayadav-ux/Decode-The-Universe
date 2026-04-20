@@ -63,7 +63,7 @@ const round1Schema = new mongoose.Schema(
   },
   {
     timestamps: true,
-    collection: 'round1'
+    collection: 'round0' // DB Migration Option A: keeping collection name 'round0' for existing data
   }
 );
 

@@ -6,7 +6,7 @@
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
 /**
- * Get JWT token from sessionStorage (tab-specific, not persistent)
+ * Get JWT token from localStorage (persistent)
  */
 const getAuthToken = () => {
   return localStorage.getItem('jwtToken');
@@ -25,7 +25,7 @@ const getHeaders = () => {
 
 /**
  * Fetch questions for a specific round
- * @param {number} roundNumber - Round number (1-3)
+ * @param {number} roundNumber - Round number (0-3)
  * @returns {Promise<Array>} - Array of questions
  */
 export const fetchQuestions = async (roundNumber) => {
@@ -50,7 +50,7 @@ export const fetchQuestions = async (roundNumber) => {
 
 /**
  * Start a quiz/game round for a team
- * @param {number} roundNumber - Round number (1-3)
+ * @param {number} roundNumber - Round number (0-3)
  * @param {string} teamId - Team ID
  * @returns {Promise<Object>} - Quiz start response
  */
@@ -77,7 +77,7 @@ export const startRound = async (roundNumber, teamId) => {
 
 /**
  * Submit an answer for a quiz question
- * @param {number} roundNumber - Round number (1-3)
+ * @param {number} roundNumber - Round number (0-3)
  * @param {string} teamId - Team ID
  * @param {Object} answerData - Answer data
  * @returns {Promise<Object>} - Submission response
@@ -108,7 +108,7 @@ export const submitAnswer = async (roundNumber, teamId, answerData) => {
 
 /**
  * Get progress for a team in a specific round
- * @param {number} roundNumber - Round number (1-3)
+ * @param {number} roundNumber - Round number (0-3)
  * @param {string} teamId - Team ID
  * @returns {Promise<Object>} - Progress data
  */
@@ -134,7 +134,7 @@ export const getProgress = async (roundNumber, teamId) => {
 
 /**
  * Complete a round
- * @param {number} roundNumber - Round number (1-3)
+ * @param {number} roundNumber - Round number (0-3)
  * @param {string} teamId - Team ID
  * @param {Object} completionData - Completion data
  * @returns {Promise<Object>} - Completion response
@@ -166,9 +166,9 @@ export const completeRound = async (roundNumber, teamId, completionData) => {
 /**
  * Call gateway endpoint to get combined progress + questions/clues for a round
  * Replaces separate fetchQuestions() and getProgress() calls
- * @param {number} roundNumber - Round number (1 for Quiz/Round 1, 2 for Round 2, 3 for Final Round)
+ * @param {number} roundNumber - Round number (0 for Quiz, 1 for Stages, 3 for Final Round)
  * @returns {Promise<Object>} - Gateway response containing { progress, questions/clues, totalQuestions/totalClues }
- * @throws {Error} - If roundNumber is not 1, 2, or 3, or if the request fails
+ * @throws {Error} - If roundNumber is not 0, 1, or 3, or if the request fails
  */
 export const callGateway = async (roundNumber) => {
   try {
@@ -214,13 +214,13 @@ export const callGateway = async (roundNumber) => {
 };
 
 /**
- * Advance to next stage for Round 1 (calculates time from backend timestamps)
+ * Advance to next stage for Round 2 (calculates time from backend timestamps)
  * @param {string} teamId - Team ID
  * @returns {Promise<Object>} - Advance response with updated stage info
  */
-export const advanceRound1Stage = async (teamId) => {
+export const advanceRound2Stage = async (teamId) => {
   try {
-    const response = await fetch(`${API_URL}/api/quiz/1/advance`, {
+    const response = await fetch(`${API_URL}/api/quiz/2/advance`, {
       method: 'POST',
       headers: getHeaders(),
       body: JSON.stringify({
@@ -248,5 +248,5 @@ export default {
   getProgress,
   completeRound,
   callGateway,
-  advanceRound1Stage
+  advanceRound2Stage
 };

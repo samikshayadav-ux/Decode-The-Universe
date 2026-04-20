@@ -77,8 +77,6 @@ export const register = async (req, res) => {
         teamId: team.teamId,
         teamName: team.teamName,
         members: team.members,
-        currentRound: team.currentRound,
-        unlockedRounds: team.unlockedRounds,
         isGuest: false
       }
     });
@@ -171,8 +169,6 @@ export const login = async (req, res) => {
         teamId: team.teamId,
         teamName: team.teamName,
         members: team.members,
-        currentRound: team.currentRound,
-        unlockedRounds: team.unlockedRounds,
         isGuest: false
       }
     });
