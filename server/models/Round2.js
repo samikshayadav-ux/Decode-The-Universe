@@ -11,7 +11,7 @@ const round2Schema = new mongoose.Schema(
       type: String,
       required: true
     },
-    // Stage tracking (1-3)
+    // Stage tracking (1-10)
     currentStage: {
       type: Number,
       default: 1,

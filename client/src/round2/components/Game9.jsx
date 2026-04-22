@@ -28,7 +28,7 @@ const allTasks = [
   { description: "Name the largest planet in our solar system", code: "JUPITER" }
 ];
 
-export default function TeamTasks() {
+export default function TeamTasks({ onComplete }) {
   const [gameStarted, setGameStarted] = useState(false);
   const [teamSize, setTeamSize] = useState(null);
   const [allGameTasks, setAllGameTasks] = useState([]);
@@ -40,7 +40,6 @@ export default function TeamTasks() {
   const [progress, setProgress] = useState(0);
   const [feedback, setFeedback] = useState({});
   const [allCompleted, setAllCompleted] = useState(false);
-  const [showNextGame, setShowNextGame] = useState(false);
 
   const totalTasks = teamSize === 3 ? 6 : 8;
 
@@ -75,10 +74,10 @@ export default function TeamTasks() {
       setAllCompleted(true);
       // Auto redirect to next game after 2 seconds
       setTimeout(() => {
-        setShowNextGame(true);
+        if (onComplete) onComplete();
       }, 2000);
     }
-  }, [completedCount, totalTasks, allCompleted]);
+  }, [completedCount, totalTasks, allCompleted, onComplete]);
 
   const handleStart = (size) => {
     setTeamSize(size);
