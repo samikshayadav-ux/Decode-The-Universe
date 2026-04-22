@@ -447,9 +447,7 @@ export const getLeaderboardData = async (roundNumber) => {
         const stageTimes = {};
         if (round.stageTimes && Array.isArray(round.stageTimes)) {
           round.stageTimes.forEach(st => {
-            if (st.stageId === 1) stageTimes.stage1 = st.timeSpent || null;
-            if (st.stageId === 2) stageTimes.stage2 = st.timeSpent || null;
-            if (st.stageId === 3) stageTimes.stage3 = st.timeSpent || null;
+            stageTimes[`stage${st.stageId}`] = st.timeSpent || null;
           });
         }
         

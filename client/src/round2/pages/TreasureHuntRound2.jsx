@@ -1,130 +1,105 @@
 import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { callGateway, advanceRound2Stage, completeRound } from '../../utils/quizApi';
+
+// Import all game components
 import Game1 from '../components/Game1';
 import Game2 from '../components/Game2';
 import Game3 from '../components/Game3';
-import { callGateway, advanceRound2Stage } from '../../utils/quizApi';
+import Game4 from '../components/Game4';
+import Game5 from '../components/Game5';
+import Game6 from '../components/Game6';
+import Game7 from '../components/Game7';
+import Game8 from '../components/Game8';
+import Game9 from '../components/Game9';
+import Game10 from '../components/Game10';
 
-const TOTAL_STAGES = 3;
-
-const stageTitles = {
-  1: "Stage 1",
-  2: "Stage 2",
-  3: "Stage 3",
-};
+const TOTAL_STAGES = 10;
 
 const TreasureHuntRound2 = () => {
+  const [introDone, setIntroDone] = useState(false);
+  const [introStep, setIntroStep] = useState(0);
   const [currentStage, setCurrentStage] = useState(() => {
-    const savedStage = sessionStorage.getItem('currentStage');
+    const savedStage = sessionStorage.getItem('currentStageR2');
     return savedStage ? parseInt(savedStage, 10) : 1;
   });
-
   const [startTime] = useState(() => {
-    const saved = sessionStorage.getItem('startTime');
+    const saved = sessionStorage.getItem('startTimeR2');
     if (saved) return new Date(parseInt(saved, 10));
     const now = new Date();
-    sessionStorage.setItem('startTime', now.getTime());
+    sessionStorage.setItem('startTimeR2', now.getTime());
     return now;
   });
-
   const [elapsed, setElapsed] = useState(0);
   const [isTransitioning, setIsTransitioning] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [questions, setQuestions] = useState([]);
-  const [progress, setProgress] = useState(null);
-  const [stageStartTimes, setStageStartTimes] = useState({});
-  const [isCompleted, setIsCompleted] = useState(false);
-  const [completionTime, setCompletionTime] = useState(null);
+  
+  // Dev tools state
+  const [showDevTools, setShowDevTools] = useState(false);
+  const [devStageInput, setDevStageInput] = useState('');
 
-  // Initialize Round 2 on component mount
-  useEffect(() => {
-    const initializeRound2 = async () => {
-      try {
-        setIsLoading(true);
-        setError(null);
-        const data = await callGateway(2);
-        
-        if (data && data.questions && data.progress) {
-          setQuestions(data.questions);
-          setProgress(data.progress);
-          
-          // Initialize stage start times
-          const times = {};
-          for (let i = 1; i <= TOTAL_STAGES; i++) {
-            times[i] = null;
-          }
-          setStageStartTimes(times);
-          
-          console.log('[Round2] Gateway initialized:', {
-            questions: data.questions.length,
-            status: data.progress.status,
-            currentStage: data.progress.currentStage
-          });
-        } else {
-          throw new Error('Invalid gateway response');
-        }
-      } catch (err) {
-        console.error('[Round2] Gateway initialization error:', err);
-        setError(err.message || 'Failed to initialize Round 2');
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    
-    initializeRound2();
-  }, []);
+  const introMessages = ['ROUND 2', 'Tech Hunt', 'Get Ready...'];
 
   useEffect(() => {
-    sessionStorage.setItem('currentStage', currentStage.toString());
-    
-    // Track stage start time
-    if (!stageStartTimes[currentStage]) {
-      const newTimes = { ...stageStartTimes };
-      newTimes[currentStage] = Date.now();
-      setStageStartTimes(newTimes);
-    }
-  }, [currentStage, stageStartTimes]);
+    sessionStorage.setItem('currentStageR2', currentStage.toString());
+  }, [currentStage]);
 
   useEffect(() => {
     const interval = setInterval(() => {
       const now = new Date();
       const ms = now - startTime;
       setElapsed(ms);
-    }, 50); // update every 50ms for smooth milliseconds
+    }, 50);
     return () => clearInterval(interval);
   }, [startTime]);
 
-  const handleNextStage = async () => {
+  // Intro sequence logic
+  useEffect(() => {
+    if (!introDone) {
+      const steps = [
+        { text: 'ROUND 2', duration: 1500 },
+        { text: 'Tech Hunt', duration: 2000 },
+        { text: 'Get Ready...', duration: 1500 },
+      ];
+      if (introStep < steps.length) {
+        const timer = setTimeout(() => {
+          setIntroStep(prev => prev + 1);
+        }, steps[introStep].duration);
+        return () => clearTimeout(timer);
+      } else {
+        setTimeout(() => setIntroDone(true), 500);
+      }
+    }
+  }, [introStep, introDone]);
+
+  // Dev tools keyboard shortcut
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.ctrlKey && e.shiftKey && e.key === 'D') {
+        setShowDevTools(prev => !prev);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
+  const handleNextStage = () => {
     setIsTransitioning(true);
-    
-    try {
-      // Get team ID from session storage
-      const teamId = sessionStorage.getItem('authInfo') 
-        ? JSON.parse(sessionStorage.getItem('authInfo')).teamId 
-        : null;
-      
-      if (!teamId) {
-        throw new Error('Team ID not found');
-      }
-      
-      // Call advance endpoint - backend calculates time from timestamps
-      await advanceRound2Stage(teamId);
-      
-      console.log('[Round2] Stage advanced:', {
-        stage: currentStage,
-        nextStage: currentStage + 1
-      });
-      
-      // Move to next stage
+    setTimeout(() => {
       if (currentStage < TOTAL_STAGES) {
-        setCurrentStage(prev => prev + 1);
+        setCurrentStage((prev) => prev + 1);
       }
-    } catch (err) {
-      console.error('[Round2] Error advancing stage:', err);
-      setError(err.message);
-    } finally {
       setIsTransitioning(false);
+    }, 500);
+  };
+
+  const jumpToStage = () => {
+    const stageNum = parseInt(devStageInput, 10);
+    if (stageNum >= 1 && stageNum <= TOTAL_STAGES) {
+      setIsTransitioning(true);
+      setTimeout(() => {
+        setCurrentStage(stageNum);
+        setIsTransitioning(false);
+      }, 500);
     }
   };
 
@@ -132,198 +107,124 @@ const TreasureHuntRound2 = () => {
     const hrs = Math.floor(ms / 3600000);
     const mins = Math.floor((ms % 3600000) / 60000);
     const secs = Math.floor((ms % 60000) / 1000);
-    const tenths = Math.floor((ms % 1000) / 100); // 0-9
-
+    const tenths = Math.floor((ms % 1000) / 100);
     return `${hrs > 0 ? hrs.toString().padStart(2, '0') + ':' : ''}${mins
       .toString()
       .padStart(2, '0')}:${secs.toString().padStart(2, '0')}.${tenths}`;
   };
 
-  const handleRoundCompletion = () => {
-    setCompletionTime(elapsed);
-    setIsCompleted(true);
-  };
+  const games = [
+    Game1, Game2, Game3, Game4, Game5,
+    Game6, Game7, Game8, Game9, Game10
+  ];
 
-  const handleGoHome = () => {
-    // Clear session data
-    sessionStorage.removeItem('currentStage');
-    sessionStorage.removeItem('stageStartTimes');
-    // Navigate to home
-    window.location.href = '/';
-  };
+  const CurrentGame = games[currentStage - 1];
 
   return (
-    <div className="w-full  min-h-screen bg-gradient-to-br pt-8 from-gray-900 to-gray-800 text-white px-4 py-6 relative overflow-hidden">
-      {/* Timer with glowing effect and blinking blue dot */}
-      <div className="fixed top-8 right-12 z-50">
-        <span className="flex items-center gap-3">
-          <span
-            className="font-mono text-3xl font-extrabold px-6 py-2 rounded-2xl  border-2 border-blue-500"
-          >
-            {formatTime(elapsed)}
-          </span>
-        </span>
-      </div>
-
-      {/* Round indicator - centered */}
-      <div className="w-full flex justify-center mb-2">
-        <div className=" px-6 py-1 mb-8">
-          <span className="text-5xl font-medium text-blue-400">ROUND 2</span>
-        </div>
-      </div>
-
-      {/* Progress bar */}
-      <div className="w-full max-w-md mx-auto mb-16">
-        <div className="w-full bg-gray-700 rounded-full h-4 border-gray-600">
-          <motion.div
-            initial={{ width: 0 }}
-            animate={{ width: `${((currentStage) / TOTAL_STAGES) * 100}%` }}
-            transition={{ duration: 0.5, type: 'spring' }}
-            className="h-4 rounded-full bg-gradient-to-r from-blue-500 via-blue-400 to-blue-300 shadow-lg"
-          />
-        </div>
-        <div className="flex justify-between mt-2 px-1 text-xs text-blue-300 tracking-wider">
-          {[1, 2, 3].map((stage) => (
-            <span
-              key={stage}
-              className={`${
-                currentStage === stage
-                  ? 'text-blue-400 font-bold'
-                  : currentStage > stage
-                  ? 'text-blue-300'
-                  : 'text-gray-400'
-              }`}
-            >
-              S{stage}
-           </span>
-          ))}
-        </div>
-      </div>
-
-      {/* Loading State */}
-      {isLoading && (
-        <div className="w-full max-w-2xl mx-auto p-6 rounded-xl bg-gray-800/70 backdrop-blur-sm border border-gray-700 shadow-xl flex items-center justify-center min-h-64">
-          <motion.div
-            animate={{ rotate: 360 }}
-            transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
-            className="text-4xl"
-          >
-            ⚙️
-          </motion.div>
-          <motion.div
-            animate={{ opacity: [0.5, 1, 0.5] }}
-            transition={{ duration: 2, repeat: Infinity }}
-            className="ml-4 text-lg text-blue-300"
-          >
-            Initializing Round 2...
-          </motion.div>
-        </div>
-      )}
-
-      {/* Error State */}
-      {error && !isLoading && (
-        <div className="w-full max-w-2xl mx-auto p-6 rounded-xl bg-red-900/20 border border-red-600 shadow-xl">
-          <div className="text-red-400 font-bold mb-3">⚠️ Error</div>
-          <div className="text-red-200 mb-4">{error}</div>
-          <button
-            onClick={() => window.location.reload()}
-            className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition"
-          >
-            Retry
-          </button>
-        </div>
-      )}
-
-      {/* Completion Screen */}
-      {isCompleted && (
+    <div className="w-full h-screen bg-black text-white overflow-hidden relative">
+      {/* Dev Tools Panel */}
+      {showDevTools && (
         <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.5, type: 'spring' }}
-          className="fixed inset-0 bg-gradient-to-br from-gray-900/95 to-gray-800/95 flex items-center justify-center z-50"
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -20 }}
+          className="fixed top-4 left-4 z-50 bg-gray-800 p-4 rounded-lg shadow-xl"
         >
-          <div className="max-w-md w-full mx-4 text-center">
-            {/* Celebration animation */}
-            <motion.div
-              animate={{ y: [0, -20, 0] }}
-              transition={{ duration: 2, repeat: Infinity }}
-              className="text-6xl mb-6"
+          <h3 className="text-lg font-bold mb-2">Developer Tools</h3>
+          <div className="flex gap-2 mb-2">
+            <input
+              type="number"
+              min="1"
+              max={TOTAL_STAGES}
+              value={devStageInput}
+              onChange={(e) => setDevStageInput(e.target.value)}
+              className="bg-gray-700 text-white px-2 py-1 rounded w-16"
+              placeholder="Stage #"
+            />
+            <button
+              onClick={jumpToStage}
+              className="bg-blue-600 hover:bg-blue-700 px-3 py-1 rounded"
             >
-              🎉
-            </motion.div>
-
-            {/* Completion message */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2, duration: 0.5 }}
-            >
-              <h1 className="text-4xl font-bold text-white mb-2">Congratulations!</h1>
-              <p className="text-lg text-gray-300 mb-8">
-                You've completed Round 2
-              </p>
-            </motion.div>
-
-            {/* Go Home button */}
-            <motion.button
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.6, duration: 0.5 }}
-              whileHover={{ scale: 1.05, boxShadow: '0 0 30px rgba(59, 130, 246, 0.5)' }}
-              whileTap={{ scale: 0.95 }}
-              onClick={handleGoHome}
-              className="w-full px-8 py-4 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-bold rounded-lg transition-all shadow-lg"
-            >
-              Go Home
-            </motion.button>
-
-            {/* Decorative elements */}
-            <motion.div
-              animate={{ rotate: 360 }}
-              transition={{ duration: 20, repeat: Infinity, ease: 'linear' }}
-              className="absolute inset-0 -z-10 pointer-events-none"
-            >
-              <div className="absolute top-10 left-10 w-20 h-20 bg-blue-500/10 rounded-full blur-xl" />
-              <div className="absolute bottom-10 right-10 w-32 h-32 bg-purple-500/10 rounded-full blur-xl" />
-            </motion.div>
+              Jump
+            </button>
           </div>
+          <div className="flex flex-wrap gap-1">
+            {Array.from({ length: TOTAL_STAGES }, (_, i) => i + 1).map((stage) => (
+              <button
+                key={stage}
+                onClick={() => {
+                  setDevStageInput(stage.toString());
+                  jumpToStage();
+                }}
+                className={`px-2 py-1 rounded text-xs ${
+                  currentStage === stage 
+                    ? 'bg-green-600' 
+                    : 'bg-gray-700 hover:bg-gray-600'
+                }`}
+              >
+                {stage}
+              </button>
+            ))}
+          </div>
+          <button
+            onClick={() => setShowDevTools(false)}
+            className="mt-2 text-xs text-gray-400 hover:text-white"
+          >
+            Close [Ctrl+Shift+D]
+          </button>
         </motion.div>
       )}
 
-      {/* Main content with animations */}
-      {!isLoading && !error && !isCompleted && (
-      <AnimatePresence mode='wait'>
-        {!isTransitioning && (
-          <motion.main
-            key={currentStage}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-            transition={{ duration: 0.5 }}
-            className="w-full max-w-2xl mx-auto p-6 rounded-xl bg-gray-800/70 backdrop-blur-sm border border-gray-700 shadow-xl"
-          >
-            <div className="mb-6 border-b-2 border-blue-500 bor">
-              <motion.h2 
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.3 }}
-                className="text-2xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent mb-3"
-              >
-                {stageTitles[currentStage]}
-              </motion.h2>
-            </div>
+      {/* Timer (only visible after intro) */}
+      {introDone && (
+        <div className="fixed top-4 right-6 z-50">
+          <span className="font-mono text-3xl font-extrabold px-4 py-2 rounded-2xl border-2 border-blue-500 bg-black/50">
+            {formatTime(elapsed)}
+          </span>
+        </div>
+      )}
 
-            {currentStage === 1 && <Game1 onComplete={handleNextStage} />}
-            {currentStage === 2 && <Game2 onComplete={handleNextStage} />}
-            {currentStage === 3 && <Game3 onComplete={handleRoundCompletion} />}
-          </motion.main>
-        )}
-      </AnimatePresence>
+      {/* Intro overlay */}
+      {!introDone && (
+        <motion.div
+          key={`intro-${introStep}`}
+          className="absolute inset-0 flex items-center justify-center bg-black"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+        >
+          <motion.h1
+            initial={{ scale: 0.8, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ duration: 0.6 }}
+            className="text-6xl font-bold bg-gradient-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent"
+          >
+            {introMessages[introStep] || ''}
+          </motion.h1>
+        </motion.div>
+      )}
+
+      {/* Game full screen */}
+      {introDone && (
+        <AnimatePresence mode="wait">
+          {!isTransitioning && (
+            <motion.div
+              key={currentStage}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.5 }}
+              className="w-full h-full"
+            >
+              <CurrentGame onComplete={handleNextStage} />
+            </motion.div>
+          )}
+        </AnimatePresence>
       )}
 
       {/* Transition overlay */}
       {isTransitioning && (
-        <motion.div 
+        <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
@@ -344,10 +245,3 @@ const TreasureHuntRound2 = () => {
 };
 
 export default TreasureHuntRound2;
-
-// Add this CSS to your global styles or in a <style> tag:
-/*
-@keyframes blinker {
-  50% { opacity: 0.2; }
-}
-*/
