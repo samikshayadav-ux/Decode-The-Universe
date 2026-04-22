@@ -37,7 +37,7 @@ const TreasureHuntRound2 = () => {
   const [showDevTools, setShowDevTools] = useState(false);
   const [devStageInput, setDevStageInput] = useState('');
 
-  const introMessages = ['ROUND 2', 'Tech Hunt', 'Get Ready...'];
+  const introMessages = ['ROUND 2', 'Decode The Universe', 'Get Ready...'];
 
   useEffect(() => {
     sessionStorage.setItem('currentStageR2', currentStage.toString());
@@ -57,7 +57,7 @@ const TreasureHuntRound2 = () => {
     if (!introDone) {
       const steps = [
         { text: 'ROUND 2', duration: 1500 },
-        { text: 'Tech Hunt', duration: 2000 },
+        { text: 'Decode The Universe', duration: 2000 },
         { text: 'Get Ready...', duration: 1500 },
       ];
       if (introStep < steps.length) {
@@ -82,14 +82,38 @@ const TreasureHuntRound2 = () => {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
-  const handleNextStage = () => {
+  const handleNextStage = async () => {
     setIsTransitioning(true);
-    setTimeout(() => {
+    
+    try {
+      const authInfo = localStorage.getItem('authInfo');
+      const teamId = authInfo ? JSON.parse(authInfo).teamId : null;
+
+      if (teamId) {
+        if (currentStage < TOTAL_STAGES) {
+          await advanceRound2Stage(teamId);
+          setCurrentStage((prev) => prev + 1);
+        } else {
+          // Final stage completed
+          await completeRound(2, teamId, {
+            totalTime: Math.floor(elapsed / 1000),
+            completionType: 'manual_submit'
+          });
+          window.location.href = '/';
+        }
+      } else {
+        if (currentStage < TOTAL_STAGES) {
+          setCurrentStage((prev) => prev + 1);
+        }
+      }
+    } catch (err) {
+      console.error('[Round2] Error advancing stage:', err);
       if (currentStage < TOTAL_STAGES) {
         setCurrentStage((prev) => prev + 1);
       }
+    } finally {
       setIsTransitioning(false);
-    }, 500);
+    }
   };
 
   const jumpToStage = () => {

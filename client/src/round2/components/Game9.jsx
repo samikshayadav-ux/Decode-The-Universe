@@ -1,331 +1,168 @@
 import React, { useState, useEffect } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 
-const allTasks = [
-  { description: "Solve the riddle: What has keys but no locks?", code: "PIANO" },
-  { description: "Calculate 15 × 24", code: "360" },
-  { description: "Name a 5-letter word starting with B", code: "BEACH" },
-  { description: "What is the capital of France?", code: "PARIS" },
-  { description: "List three primary colors", code: "RGB" },
-  { description: "What is 2^10?", code: "1024" },
-  { description: "Name a planet in our solar system", code: "EARTH" },
-  { description: "How many continents are there?", code: "7" },
-  { description: "What is the square root of 144?", code: "12" },
-  { description: "Name the largest ocean", code: "PACIFIC" },
-  { description: "What year did World War II end?", code: "1945" },
-  { description: "How many sides does a hexagon have?", code: "6" },
-  { description: "What is the chemical symbol for gold?", code: "AU" },
-  { description: "Name a programming language", code: "PYTHON" },
-  { description: "What is 50% of 200?", code: "100" },
-  { description: "Name the first month of the year", code: "JANUARY" },
-  { description: "How many hours are in a day?", code: "24" },
-  { description: "What is the capital of Japan?", code: "TOKYO" },
-  { description: "Name a mammal that flies", code: "BAT" },
-  { description: "What is 9 × 9?", code: "81" },
-  { description: "How many minutes in an hour?", code: "60" },
-  { description: "Name a color that starts with P", code: "PURPLE" },
-  { description: "What is the opposite of hot?", code: "COLD" },
-  { description: "How many wheels does a bicycle have?", code: "2" },
-  { description: "Name the largest planet in our solar system", code: "JUPITER" }
-];
+const MurderMystery = ({ onComplete }) => {
+  const [password, setPassword] = useState("");
+  const [isCorrect, setIsCorrect] = useState(false);
+  const [error, setError] = useState(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-export default function TeamTasks({ onComplete }) {
-  const [gameStarted, setGameStarted] = useState(false);
-  const [teamSize, setTeamSize] = useState(null);
-  const [allGameTasks, setAllGameTasks] = useState([]);
-  const [currentTasks, setCurrentTasks] = useState([]);
-  const [completionCodes, setCompletionCodes] = useState([]);
-  const [completedCount, setCompletedCount] = useState(0);
-  const [taskQueue, setTaskQueue] = useState([]);
-  const [cardCompletedTasks, setCardCompletedTasks] = useState([]); // Track tasks completed per card
-  const [progress, setProgress] = useState(0);
-  const [feedback, setFeedback] = useState({});
-  const [allCompleted, setAllCompleted] = useState(false);
-
-  const totalTasks = teamSize === 3 ? 6 : 8;
+  // Correct password for the mystery
+  const CORRECT_PASSWORD = "SHADOW_IN_THE_RAIN"; // Example password
 
   useEffect(() => {
-    if (teamSize) {
-      // Randomly shuffle all tasks and select the required amount
-      const shuffled = [...allTasks].sort(() => 0.5 - Math.random());
-      const selectedForGame = shuffled.slice(0, totalTasks);
-      setAllGameTasks(selectedForGame);
-      
-      // Set initial tasks (first 3 or 4)
-      const initialTasks = selectedForGame.slice(0, teamSize);
-      setCurrentTasks(initialTasks);
-      
-      // Set remaining tasks in queue
-      const remaining = selectedForGame.slice(teamSize);
-      setTaskQueue(remaining);
-      
-      // Initialize other states
-      setCompletionCodes(Array(teamSize).fill(""));
-      setCardCompletedTasks(Array(teamSize).fill(0)); // Track completed tasks per card
-      setCompletedCount(0);
-      setFeedback({});
-    }
-  }, [teamSize, totalTasks]);
+    // Block Inspect and Shortcuts for localhost testing (matching other games)
+    const handleContextMenu = (e) => {
+      if (window.location.hostname === 'localhost') return;
+      e.preventDefault();
+    };
+    const handleKeyDown = (e) => {
+      if (window.location.hostname === 'localhost') return;
+      if (e.keyCode === 123 || (e.ctrlKey && (e.shiftKey && (e.keyCode === 73 || e.keyCode === 74 || e.keyCode === 67) || e.keyCode === 85))) {
+        e.preventDefault();
+        return false;
+      }
+    };
+    window.addEventListener('contextmenu', handleContextMenu);
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('contextmenu', handleContextMenu);
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, []);
 
-  useEffect(() => {
-    const newProgress = Math.round((completedCount / totalTasks) * 100);
-    setProgress(newProgress);
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    const normalizedInput = password.trim().toUpperCase();
     
-    if (completedCount === totalTasks && !allCompleted) {
-      setAllCompleted(true);
-      // Auto redirect to next game after 2 seconds
+    if (normalizedInput === CORRECT_PASSWORD) {
+      setIsCorrect(true);
+      setError(null);
       setTimeout(() => {
-        if (onComplete) onComplete();
+        onComplete();
       }, 2000);
-    }
-  }, [completedCount, totalTasks, allCompleted, onComplete]);
-
-  const handleStart = (size) => {
-    setTeamSize(size);
-    setGameStarted(true);
-  };
-
-  const handleCodeChange = (index, value) => {
-    const newCodes = [...completionCodes];
-    newCodes[index] = value;
-    setCompletionCodes(newCodes);
-    
-    // Clear feedback when typing
-    if (feedback[index]) {
-      const newFeedback = { ...feedback };
-      delete newFeedback[index];
-      setFeedback(newFeedback);
-    }
-  };
-
-  const handleSubmit = (index) => {
-    const userCode = completionCodes[index].toUpperCase().trim();
-    const correctCode = currentTasks[index].code.toUpperCase();
-    
-    if (userCode === correctCode) {
-      // Show success feedback briefly
-      setFeedback({
-        ...feedback,
-        [index]: { type: 'success', message: 'Correct! Loading next task...' }
-      });
-      
-      // Increment completed count and card completed tasks
-      setCompletedCount(prev => prev + 1);
-      const newCardCompletedTasks = [...cardCompletedTasks];
-      newCardCompletedTasks[index] += 1;
-      setCardCompletedTasks(newCardCompletedTasks);
-      
-      // Clear the input
-      const newCodes = [...completionCodes];
-      newCodes[index] = "";
-      setCompletionCodes(newCodes);
-      
-      // Replace completed task with new one from queue after a short delay
-      setTimeout(() => {
-        // Check if this card has completed 2 tasks or no more tasks in queue
-        if (newCardCompletedTasks[index] >= 2 || taskQueue.length === 0) {
-          // Mark this card as fully completed
-          const newCurrentTasks = [...currentTasks];
-          newCurrentTasks[index] = null;
-          setCurrentTasks(newCurrentTasks);
-          
-          const newFeedback = { ...feedback };
-          delete newFeedback[index];
-          setFeedback(newFeedback);
-        } else {
-          // Give new task from queue
-          const newCurrentTasks = [...currentTasks];
-          newCurrentTasks[index] = taskQueue[0];
-          setCurrentTasks(newCurrentTasks);
-          
-          const newQueue = taskQueue.slice(1);
-          setTaskQueue(newQueue);
-          
-          // Clear feedback for the new task
-          const newFeedback = { ...feedback };
-          delete newFeedback[index];
-          setFeedback(newFeedback);
-        }
-      }, 1000);
-      
     } else {
-      setFeedback({
-        ...feedback,
-        [index]: { type: 'error', message: 'Incorrect code. Try again!' }
-      });
+      setError("Incorrect password. The evidence suggests otherwise...");
+      setTimeout(() => setError(null), 3000);
     }
   };
 
-  const resetGame = () => {
-    setGameStarted(false);
-    setTeamSize(null);
-    setAllGameTasks([]);
-    setCurrentTasks([]);
-    setCompletionCodes([]);
-    setCompletedCount(0);
-    setTaskQueue([]);
-    setProgress(0);
-    setFeedback({});
-    setAllCompleted(false);
-  };
-
-  if (!gameStarted) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center p-6">
-        <div className="text-center max-w-md w-full">
-          <div className="animate-fade-in">
-            <div className="bg-slate-800/50 backdrop-blur-sm rounded-2xl p-8 shadow-2xl border border-slate-700">
-              <h2 className="text-xl text-slate-300 mb-6">
-                How many team members?
-              </h2>
-              <div className="space-y-4">
-                <button
-                  onClick={() => handleStart(3)}
-                  className="w-full py-4 px-6 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl transition-all duration-300 transform hover:scale-105 hover:shadow-lg"
-                >
-                  3 Members
-                </button>
-                <button
-                  onClick={() => handleStart(4)}
-                  className="w-full py-4 px-6 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-xl transition-all duration-300 transform hover:scale-105 hover:shadow-lg"
-                >
-                  4 Members
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  const clues = [
+    { type: 'pdf', title: 'Crime Scene', url: '/clues/The Murder Mystery.pdf' },
+    { type: 'pdf', title: 'Circumstantial Evidence', url: '/clues/Who is the Murderer.pdf' },
+    { type: 'audio', title: 'Witness Interview', url: '/clues/witness_audio.mp3' },
+    { type: 'audio', title: 'Phone Call Recording', url: '/clues/phone_call.mp3' }
+  ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-6">
-      <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="text-center mb-14">
-          <h1 className="text-4xl font-bold text-white mb-14 tracking-wider">
-            
-          </h1>
-          
-          {/* Progress Bar */}
-          <div className="max-w-2xl mx-auto mb-16">
-            <div className="flex justify-between items-center mb-2">
-              <span className="text-slate-400 text-sm">Progress</span>
-              <span className="text-slate-300 font-semibold">{progress}% Complete</span>
-            </div>
-            <div className="h-3 bg-slate-700 rounded-full overflow-hidden">
-              <div 
-                className="h-full bg-gradient-to-r from-blue-500 to-emerald-500 rounded-full transition-all duration-700 ease-out"
-                style={{ width: `${progress}%` }}
-              />
-            </div>
-          </div>
-
-          {allCompleted && (
-            <div className="animate-bounce mb-4">
-              <div className="inline-block bg-emerald-500 text-white px-6 py-3 rounded-full font-semibold">
-                🎉 All Tasks Completed! 🎉
-              </div>
-            </div>
-          )}
+    <div className="w-full h-full flex flex-col items-center justify-center bg-black p-4">
+      <motion.div 
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        className="w-full max-w-4xl bg-white/[0.02] border border-white/10 rounded-3xl overflow-hidden flex flex-col shadow-2xl"
+      >
+        <div className="p-8 border-b border-white/5 text-center">
+          <span className="text-[10px] font-black text-red-500 uppercase tracking-[0.4em] mb-2 block">Stage 9: Investigation</span>
+          <h2 className="text-4xl font-black text-white tracking-tighter uppercase italic">Murder Mystery</h2>
+          <div className="h-1 w-20 bg-red-600 mx-auto mt-4" />
         </div>
 
-        {/* Tasks Grid */}
-        <div className={`grid gap-6 mb-8 ${
-          teamSize === 3 
-            ? 'md:grid-cols-3 lg:grid-cols-3' 
-            : 'md:grid-cols-2 lg:grid-cols-4'
-        }`}>
-          {currentTasks.map((task, index) => (
-            task ? (
-              <div
-                key={`${task.code}-${index}`}
-                className="bg-slate-800/50 backdrop-blur-sm rounded-xl p-6 border border-slate-700 hover:border-slate-600 transition-all duration-500 hover:transform hover:scale-105 animate-fade-in"
-              >
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-semibold text-white mb-3">
-                    PLAYER {index + 1}
-                  </h3>
-                </div>
+        <div className="p-8 space-y-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Clues Section */}
+            <div className="space-y-4">
+              <h3 className="text-xs font-bold text-white/40 uppercase tracking-widest mb-4">Case Evidence</h3>
+              <div className="grid grid-cols-1 gap-3">
+                {clues.map((clue, idx) => (
+                  <div key={idx} className="group flex items-center justify-between p-4 bg-white/[0.03] rounded-xl border border-white/5 hover:bg-white/[0.06] transition-all duration-300">
+                    <div className="flex items-center gap-4">
+                      <div className={`p-2 rounded-lg ${clue.type === 'pdf' ? 'bg-red-500/10 text-red-400' : 'bg-blue-500/10 text-blue-400'}`}>
+                        {clue.type === 'pdf' ? (
+                          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                          </svg>
+                        ) : (
+                          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
+                          </svg>
+                        )}
+                      </div>
+                      <span className="text-sm font-bold text-white/80">{clue.title}</span>
+                    </div>
+                    <a 
+                      href={clue.url} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="px-4 py-2 bg-white/5 hover:bg-white/10 rounded-lg text-[10px] font-black uppercase tracking-widest transition-colors"
+                    >
+                      Open
+                    </a>
+                  </div>
+                ))}
+              </div>
+            </div>
 
-                <p className="text-slate-300 mb-6 min-h-[120px] leading-relaxed">
-                  {task.description}
+            {/* Submission Section */}
+            <div className="flex flex-col justify-center space-y-6 bg-white/[0.01] p-8 rounded-2xl border border-white/5">
+              <div className="text-center">
+                <p className="text-sm text-white/60 leading-relaxed mb-6">
+                  Connect the dots to find the sequence.
                 </p>
-                
-                <div className="space-y-3">
+                <h4 className="text-lg font-bold text-white mb-2 tracking-tight">What is the password?</h4>
+              </div>
+
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div className="relative">
                   <input
                     type="text"
-                    placeholder="Enter completion code"
-                    value={completionCodes[index]}
-                    onChange={(e) => handleCodeChange(index, e.target.value)}
-                    className="w-full px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className={`w-full px-6 py-4 bg-black/40 border-b-2 transition-all duration-300 outline-none text-xl font-bold placeholder:text-white/10 text-center uppercase tracking-widest ${
+                      isCorrect ? 'border-emerald-500 text-emerald-400' : 
+                      error ? 'border-red-500 text-red-400' : 'border-white/10 focus:border-red-500 text-white'
+                    }`}
+                    placeholder="ENTER CODE..."
+                    autoFocus
+                    disabled={isCorrect}
                   />
-                  
-                  {feedback[index] && (
-                    <div className={`p-3 rounded-lg text-sm font-medium animate-fade-in ${
-                      feedback[index].type === 'success'
-                        ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
-                        : 'bg-red-500/20 text-red-300 border border-red-500/30'
-                    }`}>
-                      {feedback[index].message}
-                    </div>
-                  )}
-                  
-                  <button
-                    onClick={() => handleSubmit(index)}
-                    disabled={!completionCodes[index].trim() || feedback[index]?.type === 'success'}
-                    className="w-full py-3 px-4 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-600 disabled:cursor-not-allowed text-white font-semibold rounded-lg transition-all duration-200 transform hover:scale-[1.02] active:scale-[0.98]"
-                  >
-                    SUBMIT
-                  </button>
                 </div>
-              </div>
-            ) : (
-              <div
-                key={`completed-${index}`}
-                className="bg-emerald-500/10 backdrop-blur-sm rounded-xl p-6 border border-emerald-500/30 transition-all duration-500"
-              >
-                <div className="text-center py-8">
-                  <div className="animate-bounce mb-4">
-                    <span className="text-4xl">🎉</span>
-                  </div>
-                  <p className="text-emerald-400 font-semibold text-lg">
-                    Slot {index + 1} Complete!
-                  </p>
-                  <p className="text-emerald-300 text-sm mt-2">
-                    All tasks finished
-                  </p>
-                </div>
-              </div>
-            )
-          ))}
-        </div>
 
-        {/* Footer */}
-        <div className="text-center space-y-4">
-          <div className="text-slate-400">
-            <p>Complete all {totalTasks} tasks to finish the game</p>
-            <p className="text-sm mt-1">Tasks remaining in queue: {taskQueue.length}</p>
+                <AnimatePresence>
+                  {error && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0 }}
+                      className="text-center text-red-500 text-[10px] font-bold uppercase tracking-widest"
+                    >
+                      {error}
+                    </motion.div>
+                  )}
+                  {isCorrect && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="text-center text-emerald-500 text-[10px] font-bold uppercase tracking-widest"
+                    >
+                      Case Solved. Moving to final debrief...
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+
+                <button
+                  type="submit"
+                  disabled={isCorrect || !password.trim()}
+                  className="w-full py-4 bg-red-600 hover:bg-red-700 disabled:bg-white/5 disabled:text-white/20 text-white font-black uppercase tracking-[0.2em] rounded-xl transition-all duration-300 shadow-lg shadow-red-900/20 active:scale-95"
+                >
+                  Confirm Evidence
+                </button>
+              </form>
+            </div>
           </div>
         </div>
-      </div>
-
-      <style jsx>{`
-        @keyframes fade-in {
-          from { opacity: 0; transform: translateY(20px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-        @keyframes spin-once {
-          from { transform: rotate(0deg) scale(0.5); }
-          to { transform: rotate(360deg) scale(1); }
-        }
-        .animate-fade-in {
-          animation: fade-in 0.6s ease-out;
-        }
-        .animate-spin-once {
-          animation: spin-once 0.8s ease-out;
-        }
-      `}</style>
+      </motion.div>
     </div>
   );
-}
+};
+
+export default MurderMystery;

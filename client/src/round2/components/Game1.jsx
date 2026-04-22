@@ -73,8 +73,15 @@ const Game1 = ({ onComplete }) => {
     setButtons(newButtons);
 
     // Block Inspect and Shortcuts
-    const handleContextMenu = (e) => e.preventDefault();
+    const handleContextMenu = (e) => {
+      // Allow context menu for local testing
+      if (window.location.hostname === 'localhost') return;
+      e.preventDefault();
+    };
     const handleKeyDown = (e) => {
+      // Allow shortcuts for local testing
+      if (window.location.hostname === 'localhost') return;
+      
       // F12
       if (e.keyCode === 123) {
         e.preventDefault();
