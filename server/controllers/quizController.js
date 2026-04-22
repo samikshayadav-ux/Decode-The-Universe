@@ -109,23 +109,6 @@ export const submitAnswer = async (req, res) => {
 
     const roundNumber = parseInt(round);
 
-    // Fetch the team (for validation and backward compatibility)
-    const team = await Team.findOne({ teamId });
-    if (!team) {
-      return res.status(404).json({
-        status: 'error',
-        message: 'Team not found'
-      });
-    }
-
-    // Validate that rounds 0, 1, and 3 are supported
-    if (![1, 2, 3].includes(roundNumber)) {
-      return res.status(501).json({
-        status: 'error',
-        message: `Round ${roundNumber} submission not yet implemented. Please use Round 1 (Quiz), Round 2 (Stages), or Round 3 (Final Challenge).`
-      });
-    }
-
     // Load questions from JSON
     let questions;
     try {
@@ -141,6 +124,15 @@ export const submitAnswer = async (req, res) => {
       return res.status(500).json({
         status: 'error',
         message: 'Failed to load questions'
+      });
+    }
+
+    // Fetch the team (for validation and backward compatibility)
+    const team = await Team.findOne({ teamId });
+    if (!team) {
+      return res.status(404).json({
+        status: 'error',
+        message: 'Team not found'
       });
     }
 
@@ -174,9 +166,28 @@ export const submitAnswer = async (req, res) => {
     let roundRecord;
     if (roundNumber === 1) {
       roundRecord = await Round1.findByTeamId(teamId);
+      
+      // If round record doesn't exist, create it (on-the-fly initialization)
+      if (!roundRecord) {
+        console.log(`[Quiz Controller] Round 1 record not found for team ${teamId}, creating new one...`);
+        roundRecord = new Round1({
+          teamId,
+          teamName: team.teamName,
+          currentQuestion: 0,
+          score: 0,
+          timeLeft: timeLeft || 1500,
+          answers: [],
+          totalTimeSpent: 0,
+          timeAtLastSubmission: 0,
+          status: 'in_progress',
+          startedAt: new Date(),
+          totalQuestions: questions.length
+        });
+      }
+
       if (roundRecord) {
-        // Pass totalQuestions (95 for round 0)
-        roundRecord.submitAnswer(questionId, question.question, answer, question.answer, isCorrect, timeTaken || 0, 95);
+        // Pass totalQuestions
+        roundRecord.submitAnswer(questionId, question.question, answer, question.answer, isCorrect, timeTaken || 0, questions.length);
         
         // Store current time left (passed from frontend)
         if (timeLeft !== undefined) {
@@ -189,6 +200,7 @@ export const submitAnswer = async (req, res) => {
         }
         
         await roundRecord.save();
+        console.log(`[Quiz Controller] Saved Round 1 record for team ${teamId}`);
       }
     } else if (roundNumber === 2) {
       roundRecord = await Round2.findByTeamId(teamId);
@@ -247,12 +259,12 @@ export const submitAnswer = async (req, res) => {
       ...(roundNumber === 1 && { currentQuestion: roundRecord?.currentQuestion || (questionId + 1) }),
       ...(roundNumber === 2 && { 
         currentStage: roundRecord?.currentStage,
-        answersCount: roundRecord?.stage2Answers?.length || 0
+        answersCount: roundRecord?.stage1Answers?.length || 0
       }),
       score: roundRecord?.score || 0,
       timeLeft: roundRecord?.timeLeft || 0,
-      answers: roundRecord?.answers || roundRecord?.stage2Answers || [],
-      answersCount: roundRecord?.answers?.length || roundRecord?.stage2Answers?.length || 0,
+      answers: roundRecord?.answers || roundRecord?.stage1Answers || [],
+      answersCount: roundRecord?.answers?.length || roundRecord?.stage1Answers?.length || 0,
       status: roundRecord?.status || 'in-progress',
       totalTimeSpent: roundRecord?.totalTimeSpent || 0,
       timeAtLastSubmission: roundRecord?.timeAtLastSubmission || Date.now(),
@@ -396,7 +408,7 @@ export const completeRound = async (req, res) => {
         }
         
         // If completing the entire round (all stages done)
-        if (currentStage === 3) {
+        if (currentStage === 10) {
           round2Record.completedAt = new Date();
           round2Record.status = 'completed';
           round2Record.completionType = completionType || 'manual_submit';
@@ -416,9 +428,9 @@ export const completeRound = async (req, res) => {
           displayTime: round2Record.displayTime,
           status: round2Record.status,
           completionType: round2Record.completionType,
-          answersCount: round2Record.stage2Answers.length,
+          answersCount: round2Record.stage1Answers.length,
           stageTimes: round2Record.stageTimes,
-          answers: round2Record.stage2Answers // Return stage 1 answers
+          answers: round2Record.stage1Answers // Return stage 1 answers
         };
       }
     } else if (roundNumber === 3) {
@@ -542,8 +554,8 @@ export const getRoundProgress = async (req, res) => {
         roundNumber,
         status: round2Record.status,
         currentStage: round2Record.currentStage,
-        stage2Answers: round2Record.stage2Answers,
-        answersCount: round2Record.stage2Answers?.length || 0,
+        stage1Answers: round2Record.stage1Answers,
+        answersCount: round2Record.stage1Answers?.length || 0,
         totalTimeSpent: round2Record.totalTimeSpent,
         displayTime: round2Record.displayTime,
         stageTimes: round2Record.stageTimes,
@@ -685,7 +697,7 @@ export const startRound = async (req, res) => {
           teamId,
           teamName: team.teamName,
           currentStage: 1,
-          stage2Answers: [],
+          stage1Answers: [],
           totalTimeSpent: 0,
           stageTimes: [
             {
@@ -720,7 +732,7 @@ export const startRound = async (req, res) => {
         ...responseData,
         status: round2Record.status,
         currentStage: round2Record.currentStage,
-        stage2Answers: round2Record.stage2Answers,
+        stage1Answers: round2Record.stage1Answers,
         startedAt: round2Record.startedAt
       };
     } else if (roundNumber === 3) {
@@ -816,8 +828,8 @@ export const advanceRound2Stage = async (req, res) => {
       console.log(`[Quiz Controller] Completed Stage ${currentStage} - Calculated time: ${elapsedSeconds}s from timestamps`);
     }
 
-    // Advance to next stage if not at stage 3
-    if (currentStage < 3) {
+    // Advance to next stage if not at stage 10
+    if (currentStage < 10) {
       const nextStage = currentStage + 1;
       round2Record.currentStage = nextStage;
 

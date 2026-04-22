@@ -155,7 +155,7 @@ export const initializeRound2 = async (req, res) => {
         teamId,
         teamName: team.teamName,
         currentStage: 1,
-        stage2Answers: [],
+        stage1Answers: [],
         totalTimeSpent: 0,
         stageTimes: [
           {
@@ -174,24 +174,17 @@ export const initializeRound2 = async (req, res) => {
       console.log(`[Gateway Controller] Created new Round2 record for team ${teamId}`);
     }
 
-    // Load questions from JSON (Stage 2 questions from Data1.json)
-    let questions;
-    try {
-      questions = loadQuestions(2);
-    } catch (loadError) {
-      console.error(`[Gateway Controller] Error loading Round 2 questions:`, loadError.message);
-      return res.status(500).json({
-        status: 'error',
-        message: 'Failed to load round 1 questions'
-      });
-    }
+    // Round 2 uses Game1-Game10 components on frontend
+    // We don't need to load questions from JSON, but we'll return an empty array
+    // to maintain the API structure if needed
+    let questions = [];
 
     console.log(`[Gateway Controller] Round 2 initialized for team ${teamId}`);
     console.log(`[Gateway Controller] Round2 Record Details:`, {
       teamId: round2Record.teamId,
       status: round2Record.status,
       currentStage: round2Record.currentStage,
-      answersCount: round2Record.stage2Answers.length,
+      answersCount: round2Record.stage1Answers ? round2Record.stage1Answers.length : 0,
       totalTimeSpent: round2Record.totalTimeSpent,
       createdAt: round2Record.createdAt,
       updatedAt: round2Record.updatedAt
@@ -206,13 +199,13 @@ export const initializeRound2 = async (req, res) => {
           teamId: round2Record.teamId,
           teamName: round2Record.teamName,
           currentStage: round2Record.currentStage,
-          stage2Answers: round2Record.stage2Answers.map(ans => ({
+          stage1Answers: (round2Record.stage1Answers || []).map(ans => ({
             questionId: ans.questionId,
             answer: ans.answer,
             isCorrect: ans.isCorrect,
             timestamp: ans.timestamp
           })),
-          answersCount: round2Record.stage2Answers.length,
+          answersCount: round2Record.stage1Answers ? round2Record.stage1Answers.length : 0,
           status: round2Record.status,
           totalTimeSpent: round2Record.totalTimeSpent,
           stageTimes: round2Record.stageTimes,
@@ -221,20 +214,8 @@ export const initializeRound2 = async (req, res) => {
           completedAt: round2Record.completedAt,
           completionType: round2Record.completionType
         },
-        questions: questions.map(q => ({
-          id: q.id,
-          question: q.question,
-          ...(q.img && { img: q.img }),
-          ...(q.code && { code: q.code }),
-          ...(q.text && { text: q.text }),
-          ...(q.properties && { properties: q.properties }),
-          ...(q.stats && { stats: q.stats }),
-          ...(q.details && { details: q.details }),
-          ...(q.passage && { passage: q.passage }),
-          type: q.type
-          // DO NOT include: answer (for security)
-        })),
-        totalQuestions: questions.length
+        questions: questions,
+        totalQuestions: 10 // Round 2 has 10 games
       }
     });
   } catch (error) {

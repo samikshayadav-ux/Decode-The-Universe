@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import Stage1 from '../../round1/components/Stage1';
-import Stage2 from '../../round1/components/Stage2';
-import Stage3 from '../../round1/components/Stage3';
+import Game1 from '../components/Game1';
+import Game2 from '../components/Game2';
+import Game3 from '../components/Game3';
 import { callGateway, advanceRound2Stage } from '../../utils/quizApi';
 
 const TOTAL_STAGES = 3;
@@ -313,9 +313,9 @@ const TreasureHuntRound2 = () => {
               </motion.h2>
             </div>
 
-            {currentStage === 1 && <Stage1 onComplete={handleNextStage} />}
-            {currentStage === 2 && <Stage2 onComplete={handleNextStage} />}
-            {currentStage === 3 && <Stage3 onComplete={handleRoundCompletion} />}
+            {currentStage === 1 && <Game1 onComplete={handleNextStage} />}
+            {currentStage === 2 && <Game2 onComplete={handleNextStage} />}
+            {currentStage === 3 && <Game3 onComplete={handleRoundCompletion} />}
           </motion.main>
         )}
       </AnimatePresence>

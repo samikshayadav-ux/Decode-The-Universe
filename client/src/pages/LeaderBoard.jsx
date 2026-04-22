@@ -15,9 +15,6 @@ const LeaderBoard = () => {
   const [positionChanges, setPositionChanges] = useState({});
   const unsubscribeRef = useRef(null);
 
-  /**
-   * Format time in MM:SS format
-   */
   const formatTime = useCallback((seconds) => {
     if (!seconds && seconds !== 0) return '--:--';
     const adjustedSeconds = seconds + 1;
@@ -26,45 +23,28 @@ const LeaderBoard = () => {
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   }, []);
 
-  /**
-   * Fetch leaderboard data from backend API
-   */
-  const fetchLeaderboard = useCallback(async (roundNum = currentRound) => {
-    try {
-      setLoading(true);
-      const response = await fetch(`${API_URL}/api/leaderboard/${roundNum}`);
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      const data = await response.json();
-      setError(null);
-      processLeaderboard(data);
-    } catch (err) {
-      console.error('Error fetching leaderboard:', err);
-      setError('Failed to load leaderboard');
-    } finally {
-      setLoading(false);
-    }
-  }, [currentRound]);
-
-  /**
-   * Process and sort leaderboard data
-   */
   const processLeaderboard = useCallback((data) => {
-    if (!data || data.length === 0) {
+    if (!data || !Array.isArray(data) || data.length === 0) {
       setTeams([]);
       return;
     }
 
-    const processedTeams = data.map(team => ({
-      team_id: team.team_id,
-      team_name: team.team_name,
+    const processedTeams = data.map((team, index) => ({
+      // FIX 1: Guaranteed unique teamId with index fallback
+      teamId: team.teamId || team.team_id || `team-fallback-${index}`,
+      teamName: team.teamName || team.team_name,
       score: team.score || 0,
       displayTime: team.answers?.length > 0
-        ? (team.completed_at ? team.total_time_spent : team.time_at_last_submission)
+        ? (team.completedAt || team.completed_at
+            ? team.totalTimeSpent || team.total_time_spent
+            : team.timeAtLastSubmission || team.time_at_last_submission)
         : null,
       sortTime: team.answers?.length > 0
-        ? (team.completed_at ? team.total_time_spent : team.time_at_last_submission) || Infinity
+        ? (team.completedAt || team.completed_at
+            ? team.totalTimeSpent || team.total_time_spent
+            : team.timeAtLastSubmission || team.time_at_last_submission) || Infinity
         : Infinity,
-      lastSubmittedAt: team.updated_at
+      lastSubmittedAt: team.updatedAt || team.updated_at
     }));
 
     const sortedTeams = [...processedTeams].sort((a, b) => {
@@ -73,32 +53,32 @@ const LeaderBoard = () => {
       return new Date(a.lastSubmittedAt) - new Date(b.lastSubmittedAt);
     });
 
-    // Track position changes
     const newPositionChanges = {};
     sortedTeams.forEach((team, currentIndex) => {
-      const previousIndex = previousPositionsRef.current[team.team_id];
+      const teamId = team.teamId;
+      const previousIndex = previousPositionsRef.current[teamId];
       if (previousIndex !== undefined && previousIndex !== currentIndex) {
         const change = previousIndex - currentIndex;
-        newPositionChanges[team.team_id] = change;
+        newPositionChanges[teamId] = change;
 
-        if (positionChangeTimersRef.current[team.team_id]) {
-          clearTimeout(positionChangeTimersRef.current[team.team_id]);
+        if (positionChangeTimersRef.current[teamId]) {
+          clearTimeout(positionChangeTimersRef.current[teamId]);
         }
 
-        positionChangeTimersRef.current[team.team_id] = setTimeout(() => {
+        positionChangeTimersRef.current[teamId] = setTimeout(() => {
           setPositionChanges(prev => {
             const updated = { ...prev };
-            delete updated[team.team_id];
+            delete updated[teamId];
             return updated;
           });
-          delete positionChangeTimersRef.current[team.team_id];
+          delete positionChangeTimersRef.current[teamId];
         }, 60000);
       }
     });
 
     const currentPositions = {};
     sortedTeams.forEach((team, index) => {
-      currentPositions[team.team_id] = index;
+      currentPositions[team.teamId] = index;
     });
     previousPositionsRef.current = currentPositions;
 
@@ -106,58 +86,69 @@ const LeaderBoard = () => {
     setTeams(sortedTeams);
   }, []);
 
-  /**
-   * Initialize Socket.IO connection and setup event listeners
-   */
+  const fetchLeaderboard = useCallback(async (roundNum = currentRound) => {
+    try {
+      setLoading(true);
+      const response = await fetch(`${API_URL}/api/leaderboard/${roundNum}`);
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const result = await response.json();
+      setError(null);
+      
+      if (result.status === 'success' && result.data && Array.isArray(result.data.leaderboard)) {
+        processLeaderboard(result.data.leaderboard);
+      } else {
+        processLeaderboard([]);
+      }
+    } catch (err) {
+      console.error('Error fetching leaderboard:', err);
+      setError('Failed to load leaderboard');
+    } finally {
+      setLoading(false);
+    }
+  }, [currentRound, processLeaderboard]);
+
   useEffect(() => {
+    let unsubscribeScores = null;
+    let pollInterval = null;
+
     const setupSocket = async () => {
       try {
-        // Fetch initial data
         await fetchLeaderboard(currentRound);
 
-        // Initialize Socket.IO connection
         const socket = initializeSocket(API_URL);
         if (!socket) {
           setError('Failed to connect to socket');
           return;
         }
 
-        // Join round leaderboard room
         joinRound(currentRound);
         setConnected(true);
 
-        // Subscribe to leaderboard updates
         unsubscribeRef.current = subscribeToLeaderboard((data) => {
-          console.log('🔄 Leaderboard update received:', data);
+          console.log('Leaderboard update received:', data);
           if (data && Array.isArray(data)) {
             processLeaderboard(data);
           }
         });
 
-        // Subscribe to team score changes (for polling fallback)
-        const unsubscribeScores = subscribeToScoreChanges(() => {
-          console.log('📊 Score change detected');
+        unsubscribeScores = subscribeToScoreChanges(() => {
+          console.log('Score change detected');
           fetchLeaderboard(currentRound);
         });
-
-        return () => {
-          if (unsubscribeRef.current) unsubscribeRef.current();
-          unsubscribeScores();
-          leaveRound(currentRound);
-        };
       } catch (err) {
         console.error('Socket setup error:', err);
         setError('Connection error - using polling');
-        
-        // Fallback: polling every 5 seconds if Socket.IO fails
-        const pollInterval = setInterval(() => fetchLeaderboard(currentRound), 5000);
-        return () => clearInterval(pollInterval);
+        pollInterval = setInterval(() => fetchLeaderboard(currentRound), 5000);
       }
     };
 
-    const cleanup = setupSocket();
+    setupSocket();
+
     return () => {
-      if (cleanup) cleanup();
+      if (unsubscribeRef.current) unsubscribeRef.current();
+      if (unsubscribeScores) unsubscribeScores();
+      if (pollInterval) clearInterval(pollInterval);
+      leaveRound(currentRound);
       Object.values(positionChangeTimersRef.current).forEach(timer => clearTimeout(timer));
       disconnectSocket();
     };
@@ -169,7 +160,7 @@ const LeaderBoard = () => {
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-5xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-purple-500 mb-2">
-            🏆 Global Leaderboard
+            Global Leaderboard
           </h1>
           <div className="flex items-center gap-3 text-sm">
             {connected && <span className="text-green-400">● Live Connected</span>}
@@ -209,12 +200,12 @@ const LeaderBoard = () => {
             <tbody className="divide-y divide-gray-700/30">
               {teams.length > 0 ? (
                 teams.map((team, index) => {
-                  const positionChange = positionChanges[team.team_id];
+                  const positionChange = positionChanges[team.teamId];
                   const hasPositionChange = typeof positionChange === 'number' && positionChange !== 0;
 
                   return (
                     <tr
-                      key={team.team_id}
+                      key={`${team.teamId ?? 'unknown'}-${index}`} // FIX 2: Always unique key
                       className="border-t border-gray-700/30 hover:bg-gray-700/20 transition-colors"
                     >
                       <td className="p-4">
@@ -234,7 +225,7 @@ const LeaderBoard = () => {
                           )}
                         </div>
                       </td>
-                      <td className="p-4 font-medium">{team.team_name}</td>
+                      <td className="p-4 font-medium">{team.teamName}</td>
                       <td className="p-4 text-center">
                         <span className="inline-flex items-center px-3 py-1 rounded-full bg-blue-900/50 text-blue-200 font-semibold">
                           {team.score}

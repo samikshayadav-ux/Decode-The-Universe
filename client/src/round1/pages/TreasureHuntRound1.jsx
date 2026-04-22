@@ -1,21 +1,21 @@
-import React, { useEffect, useState, useCallback } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { useAuth } from '../../auth/AuthContext';
-import { callGateway, submitAnswer, completeRound } from '../../utils/quizApi';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../../auth/AuthContext';
+import questionsData from './Data1.json';
+
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
 const TreasureHuntRound1 = () => {
-  const { authData, isLoading: authLoading, isLoggedIn, refreshTeamProgress } = useAuth();
-  const teamId = authData?.teamId;
+  const { authData, isLoggedIn } = useAuth();
   const navigate = useNavigate();
 
-  const [questions, setQuestions] = useState([]);
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [timeLeft, setTimeLeft] = useState(1500);
+  const [timeLeft, setTimeLeft] = useState(1500); // 25 minutes
   const [selectedOption, setSelectedOption] = useState(null);
-  const [quizState, setQuizState] = useState('loading');
-  const [startTime, setStartTime] = useState(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [quizState, setQuizState] = useState('active'); // 'active', 'completed'
+  const [score, setScore] = useState(0);
+
+  const [startTime, setStartTime] = useState(Date.now());
 
   const formatTime = (s) => {
     const m = Math.floor(s / 60);
@@ -23,164 +23,232 @@ const TreasureHuntRound1 = () => {
   };
 
   useEffect(() => {
-    const init = async () => {
-      if (authLoading) return;
-      if (!isLoggedIn || !teamId) return setQuizState('error');
+    if (!isLoggedIn) {
+      navigate('/round1');
+      return;
+    }
+
+    // Start round on backend when component mounts
+    const initializeRound = async () => {
       try {
-        const { questions: q, progress: p } = await callGateway(1);
-        setQuestions(q);
-        setCurrentIndex(p.currentQuestion || 0);
-        setTimeLeft(p.timeLeft || 1500);
-        setQuizState(p.status === 'completed' ? 'results' : 'active');
-        setStartTime(Date.now());
-      } catch (e) { setQuizState('error'); }
+        await fetch(`${API_URL}/api/quiz/1/start`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ teamId: authData.teamId, duration: 1500 })
+        });
+      } catch (err) {
+        console.error('Error starting round:', err);
+      }
     };
-    init();
-  }, [authLoading, isLoggedIn, teamId]);
+
+    initializeRound();
+    setStartTime(Date.now());
+  }, [isLoggedIn, navigate, authData.teamId]);
 
   useEffect(() => {
     if (quizState !== 'active') return;
-    const t = setInterval(() => {
-      setTimeLeft(p => {
-        if (p <= 1) { clearInterval(t); finish(true); return 0; }
-        return p - 1;
+    const timer = setInterval(() => {
+      setTimeLeft((prev) => {
+        if (prev <= 1) {
+          clearInterval(timer);
+          setQuizState('completed');
+          return 0;
+        }
+        return prev - 1;
       });
     }, 1000);
-    return () => clearInterval(t);
+    return () => clearInterval(timer);
   }, [quizState]);
 
-  const submit = async () => {
-    if (!selectedOption || isSubmitting) return;
-    setIsSubmitting(true);
+  const handleNext = async () => {
+    if (!selectedOption) return;
+
+    const currentQuestion = questionsData[currentIndex];
+    const isCorrect = selectedOption === currentQuestion.answer;
+    const timeTaken = Math.floor((Date.now() - startTime) / 1000);
+
+    // Sync answer with backend
     try {
-      await submitAnswer(1, teamId, {
-        questionId: questions[currentIndex].id,
-        answer: selectedOption,
-        timeTaken: 0, 
-        timeLeft
+      const response = await fetch(`${API_URL}/api/quiz/1/submit`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          teamId: authData.teamId,
+          questionId: currentQuestion.id,
+          answer: selectedOption,
+          timeTaken: timeTaken,
+          timeLeft: timeLeft
+        })
       });
-      if (currentIndex === questions.length - 1) finish();
-      else {
-        setCurrentIndex(v => v + 1);
-        setSelectedOption(null);
-        setIsSubmitting(false);
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error('Backend submission failed:', errorData);
+      } else {
+        const result = await response.json();
+        console.log('Backend submission successful:', result);
       }
-    } catch (e) { setIsSubmitting(false); }
+    } catch (err) {
+      console.error('Error submitting answer:', err);
+    }
+
+    // Update local state
+    if (isCorrect) {
+      setScore(prev => prev + 1);
+    }
+
+    if (currentIndex < questionsData.length - 1) {
+      setCurrentIndex(prev => prev + 1);
+      setSelectedOption(null);
+      setStartTime(Date.now());
+    } else {
+      // Final submission
+      console.log('Final question submitted, calling complete...');
+      try {
+        const response = await fetch(`${API_URL}/api/quiz/1/complete`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            teamId: authData.teamId,
+            totalTime: 1500 - timeLeft,
+            timeLeft: timeLeft,
+            completionType: 'manual_submit'
+          })
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          console.error('Backend completion failed:', errorData);
+        } else {
+          console.log('Backend completion successful');
+        }
+      } catch (err) {
+        console.error('Error completing round:', err);
+      }
+      setQuizState('completed');
+    }
   };
 
-  const finish = async (auto = false) => {
-    setQuizState('submitting');
-    try {
-      await completeRound(1, teamId, {
-        timeLeft: auto ? 0 : timeLeft,
-        totalTime: Math.floor((Date.now() - startTime) / 1000)
-      });
-      await refreshTeamProgress();
-      setQuizState('results');
-    } catch (e) { setQuizState('error'); }
-  };
-
-  useEffect(() => {
-    const handleKey = (e) => {
-      if (e.key === 'Enter' && selectedOption && !isSubmitting) submit();
-    };
-    window.addEventListener('keydown', handleKey);
-    return () => window.removeEventListener('keydown', handleKey);
-  }, [selectedOption, isSubmitting]);
-
-  if (quizState === 'loading') return <div className="min-h-screen bg-black flex items-center justify-center font-mono opacity-40 uppercase tracking-[0.5em] text-[10px]">Booting_System...</div>;
-
-  if (quizState === 'results') return (
-    <div className="min-h-screen bg-black text-white flex flex-col items-center justify-center p-12 relative">
-      <div className="absolute inset-0 starfield opacity-20" />
-      <div className="z-10 text-center space-y-12">
-        <h1 className="text-6xl font-black italic tracking-tighter uppercase">Round 1 Complete</h1>
-        <button onClick={() => navigate('/')} className="neo-button">Return to Hub</button>
-      </div>
-    </div>
-  );
-
-  const q = questions[currentIndex];
-
-  return (
-    <div className="min-h-screen bg-black text-white font-sans flex flex-col relative overflow-hidden">
-      <div className="absolute inset-0 starfield opacity-10" />
-      
-      {/* HUD Header */}
-      <div className="z-20 border-b border-white/10 backdrop-blur-md bg-black/40">
-        <div className="flex flex-col md:flex-row justify-between items-center p-6 md:px-12 gap-6">
-          <div className="flex items-center gap-4">
-            <div className="w-2 h-2 rounded-full bg-accent animate-pulse shadow-[0_0_10px_rgba(255,204,0,0.5)]" />
-            <div className="text-[10px] font-black uppercase tracking-[0.4em] opacity-40">Phase_01 // Round_1</div>
-          </div>
-          
-          <div className="relative">
-            <div className="relative flex flex-col items-center border-x-2 border-accent/20 px-8 py-2">
-              <div className="text-[8px] font-black tracking-[0.5em] text-accent/40 mb-1 uppercase">Mission_Clock</div>
-              <div className="text-4xl md:text-5xl font-mono font-black tracking-tighter text-white tabular-nums flex items-baseline gap-1">
-                <span className="opacity-20 text-xs font-sans mr-2 uppercase tracking-widest">T-Minus</span>
-                {formatTime(timeLeft)}
-              </div>
+  if (quizState === 'completed') {
+    return (
+      <div className="min-h-screen bg-black text-white font-mono flex flex-col items-center justify-center p-6">
+        <div className="w-full max-w-md border border-gray-800 p-8 rounded-lg bg-black/50 backdrop-blur-sm text-center">
+          <h1 className="text-2xl mb-6 tracking-widest text-blue-500">Round Complete</h1>
+          <div className="space-y-4 mb-8">
+            <div className="flex justify-between border-b border-gray-800 pb-2">
+              <span className="text-gray-500 uppercase text-xs">Team</span>
+              <span>{authData?.teamId || 'N/A'}</span>
+            </div>
+            <div className="flex justify-between border-b border-gray-800 pb-2">
+              <span className="text-gray-500 uppercase text-xs">Score</span>
+              <span>{score}</span>
+            </div>
+            <div className="flex justify-between border-b border-gray-800 pb-2">
+              <span className="text-gray-500 uppercase text-xs">Time Remaining</span>
+              <span>{formatTime(timeLeft)}</span>
             </div>
           </div>
+          <button
+            onClick={() => navigate('/')}
+            className="w-full py-3 rounded-lg border border-blue-500 text-blue-500 hover:bg-blue-500/10 transition-colors font-mono"
+          >
+            HOME
+          </button>
+        </div>
+      </div>
+    );
+  }
 
-          <div className="text-[10px] font-black uppercase tracking-[0.4em] opacity-40 hidden md:block">
-            Status: Active
+  const currentQuestion = questionsData[currentIndex];
+
+  return (
+    <div className="min-h-screen bg-black text-white font-mono flex flex-col">
+      {/* Techie Header */}
+      <div className="border-b border-gray-800 py-7 p-4 md:px-12 flex justify-between items-center bg-black/50 backdrop-blur-sm">
+        <div className="flex items-center gap-4">
+          <div className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
+          <div className="text-lg uppercase tracking-[0.4em] text-gray-400">
+            ROUND 1
           </div>
         </div>
         
-        <div className="h-1.5 w-full bg-white/5 relative overflow-hidden">
-          <motion.div 
-            initial={{ width: 0 }}
-            animate={{ width: `${((currentIndex + 1) / questions.length) * 100}%` }}
-            className="h-full bg-accent shadow-[0_0_15px_rgba(255,204,0,0.4)]"
-          />
+        <div className="text-center border-x border-gray-800 px-8">
+          <div className="text-2xl md:text-3xl font-black tracking-tighter flex items-baseline gap-2">
+            {formatTime(timeLeft)}
+          </div>
+        </div>
+
+      </div>
+
+      {/* Progress Bar */}
+      <div className="h-1 w-full bg-gray-900">
+        <div 
+          className="h-full bg-blue-500 transition-all duration-500 shadow-[0_0_10px_#3b82f6]"
+          style={{ width: `${((currentIndex + 1) / questionsData.length) * 100}%` }}
+        />
+      </div>
+
+      {/* Progress Text */}
+      <div className="px-4 md:px-12 py-2 flex justify-between items-center mt-3 bg-black/30">
+        <div className="text-sm text-gray-500 tracking-widest uppercase">
+          Progress: {currentIndex + 1} / {questionsData.length}
+        </div>
+        <div className="text-sm text-blue-500 tracking-widest font-bold">
+          {Math.round(((currentIndex + 1) / questionsData.length) * 100)}%
         </div>
       </div>
 
-      <main className="flex-1 flex flex-col items-center justify-center z-10 p-6">
-        <div className="w-full max-w-3xl space-y-12">
-          
-          <div className="space-y-6">
-            <div className="flex items-center gap-4 opacity-20">
-              <div className="text-[8px] font-black uppercase tracking-widest">QUERY_BUFFER_{ (currentIndex+1).toString().padStart(2, '0') }</div>
-              <div className="h-px flex-1 bg-white/40" />
+      {/* Quiz Content */}
+      <main className="flex-1 flex flex-col items-center justify-center p-6">
+        <div className="w-full max-w-2xl">
+          <div className="mb-12">
+            <div className="flex items-center gap-4 mb-4">
+              <span className="text-[10px] text-gray-600 uppercase tracking-widest">
+                Question_{ (currentIndex+1).toString().padStart(2, '0') }
+              </span>
+              <div className="h-[1px] flex-1 bg-gray-800" />
             </div>
-
-            <div className="minimal-box p-8 md:p-12 border-white/20 bg-white/[0.02]">
-              <h2 className="text-xl md:text-2xl font-bold tracking-tight leading-relaxed text-center">
-                {q?.question}
+            
+            <div className="bg-gray-950/50 border border-gray-800 p-8 rounded-lg mb-8">
+              <h2 className="text-lg md:text-xl text-center leading-relaxed">
+                {currentQuestion.question}
               </h2>
             </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {currentQuestion.options.map((option, index) => (
+                <button
+                  key={index}
+                  onClick={() => setSelectedOption(option)}
+                  className={`p-4 text-left border transition-all text-xs uppercase tracking-widest ${
+                    selectedOption === option
+                      ? 'border-blue-500 bg-blue-500/10 text-blue-500'
+                      : 'border-gray-800 bg-black hover:border-gray-600 text-gray-400'
+                  }`}
+                >
+                  <span className="mr-3 text-gray-600">{String.fromCharCode(65 + index)}.</span>
+                  {option}
+                </button>
+              ))}
+            </div>
           </div>
 
-          <div className="flex flex-col gap-2">
-            {q?.options.map((opt, i) => (
-              <button
-                key={i}
-                onClick={() => setSelectedOption(opt)}
-                className={`text-left px-8 py-5 border border-white/5 text-xs font-black uppercase tracking-widest transition-all ${
-                  selectedOption === opt 
-                    ? 'bg-white text-black border-white' 
-                    : 'bg-white/[0.02] hover:bg-white/5 opacity-50 hover:opacity-100'
-                }`}
-              >
-                {opt}
-              </button>
-            ))}
-          </div>
-
-          <div className="flex flex-col items-center gap-4 pt-4">
+          <div className="flex justify-center">
             <button
-              onClick={submit}
-              disabled={!selectedOption || isSubmitting}
-              className={`neo-button w-full md:w-80 ${(!selectedOption || isSubmitting) ? 'opacity-20 grayscale' : ''}`}
+              onClick={handleNext}
+              disabled={!selectedOption}
+              className={`w-full py-4 rounded border font-mono tracking-widest transition-all ${
+                selectedOption
+                  ? 'border-blue-500 text-blue-500 hover:bg-blue-500 hover:text-black'
+                  : 'border-gray-800 text-gray-700 cursor-not-allowed'
+              }`}
             >
-              {isSubmitting ? 'Syncing...' : 'Confirm_Selection'}
+              {currentIndex === questionsData.length - 1 ? 'SUBMIT' : 'Next'}
             </button>
           </div>
         </div>
       </main>
+
     </div>
   );
 };

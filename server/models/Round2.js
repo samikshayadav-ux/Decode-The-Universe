@@ -139,7 +139,7 @@ round2Schema.methods.completeStage = function (stageId) {
  * Instance method to move to next stage
  */
 round2Schema.methods.moveToNextStage = function () {
-  if (this.currentStage < 3) {
+  if (this.currentStage < 10) {
     this.currentStage += 1;
     // Initialize new stage timing
     this.stageTimes.push({
