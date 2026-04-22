@@ -206,20 +206,22 @@ const TreasureHuntRound2 = () => {
 
       {/* Game full screen */}
       {introDone && (
-        <AnimatePresence mode="wait">
-          {!isTransitioning && (
-            <motion.div
-              key={currentStage}
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.5 }}
-              className="w-full h-full"
-            >
-              <CurrentGame onComplete={handleNextStage} />
-            </motion.div>
-          )}
-        </AnimatePresence>
+        <main className="w-full h-full flex items-center justify-center">
+          <AnimatePresence mode="wait">
+            {!isTransitioning && (
+              <motion.div
+                key={currentStage}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.4 }}
+                className={`w-full ${currentStage === 2 ? 'max-w-3xl' : 'h-full'}`}
+              >
+                <CurrentGame onComplete={handleNextStage} />
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </main>
       )}
 
       {/* Transition overlay */}
