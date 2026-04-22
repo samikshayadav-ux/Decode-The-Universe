@@ -12,6 +12,7 @@ import GameEngine from './pages/GameEngine';
 
 // Authentication
 import Login from './auth/Login';
+import Register from './auth/Register';
 import UserAuth from './auth/UserAuth';
 
 // Admin
@@ -21,12 +22,14 @@ import ProtectedRoute from './components/ProtectedRoute';
 
 // Round Components
 import Round1Gateway from './round1/pages/Round1gateway';
-import QuizRound1 from './round1/pages/QuizRound1';
+import TreasureHuntRound1 from './round1/pages/TreasureHuntRound1';
+import Round1Live from './round1/components/round1live';
 
 import Round2Gateway from './round2/pages/Round2gateway';
 import TreasureHuntRound2 from './round2/pages/TreasureHuntRound2';
 
-import FinalRoundGateway from './round3/pages/Round3gateway';
+
+import Round3Gateway from './round3/pages/Round3gateway';
 import TreasureHuntRound3 from './round3/pages/TreasureHuntRound3';
 
 import PrivateRoute from './components/PrivateRoute';
@@ -49,6 +52,7 @@ const App = () => {
           
           {/* Authentication Routes */}
           <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
           <Route path="/auth" element={<UserAuth />} />
 
           {/* Admin Routes */}
@@ -62,34 +66,42 @@ const App = () => {
             } 
           />
 
-          {/* Round 1 (Was Round 0) */}
+          {/* Round 1 (Quiz Round) */}
           <Route path="/round1" element={<Round1Gateway />} />
+          <Route path="/round1/login" element={<Login />} />
+          <Route path="/round1/register" element={<Register />} />
+          <Route path="/round1/live" element={<Round1Live />} /> {/* Now uses Round1Live for Round 1 leaderboard */}
           <Route
             path="/round1/game"
             element={
-              <PrivateRoute roundNumber={1}>
-                <QuizRound1 />
+              <PrivateRoute round="round1">
+                <TreasureHuntRound1 />
               </PrivateRoute>
             }
           />
 
-          {/* Round 2 */}
+          {/* Round 2 (Stages/Treasure Hunt) */}
           <Route path="/round2" element={<Round2Gateway />} />
+          <Route path="/round2/login" element={<Login />} />
+          <Route path="/round2/register" element={<Register />} />
+          <Route path="/round2/live" element={<Round1Live />} /> {/* Old round1live is now Round 2 leaderboard */}
           <Route
             path="/round2/game"
             element={
-              <PrivateRoute roundNumber={2}>
+              <PrivateRoute round="round2">
                 <TreasureHuntRound2 />
               </PrivateRoute>
             }
           />
 
-          {/* Final Round (Was Round 3) */}
-          <Route path="/final-round" element={<FinalRoundGateway />} />
+          {/* Round 3 */}
+          <Route path="/round3" element={<Round3Gateway />} />
+          <Route path="/round3/login" element={<Login />} />
+          <Route path="/round3/register" element={<Register />} />
           <Route
-            path="/final-round/game"
+            path="/round3/game"
             element={
-              <PrivateRoute roundNumber={3}>
+              <PrivateRoute round="round3">
                 <TreasureHuntRound3 />
               </PrivateRoute>
             }

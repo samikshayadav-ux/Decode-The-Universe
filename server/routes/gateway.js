@@ -1,6 +1,5 @@
 import express from 'express';
 import { authenticateToken } from '../middleware/auth.js';
-import { requireRoundAccess } from '../middleware/roundAccess.js';
 import {
   initializeRound1,
   initializeRound2,
@@ -19,23 +18,24 @@ router.get('/rounds', getLiveRounds);
 
 /**
  * POST /api/gateway/round1
- * Initialize Round 1 (Quiz)
- * Requires: Valid JWT token and round access
+ * Initialize Round 1 - Check/Create Round1 record and return progress + questions
+ * Requires: Valid JWT token
  */
-router.post('/round1', authenticateToken, requireRoundAccess(1), initializeRound1);
+router.post('/round1', authenticateToken, initializeRound1);
 
 /**
  * POST /api/gateway/round2
- * Initialize Round 2 (Challenge)
- * Requires: Valid JWT token and round access
+ * Initialize Round 2 - Check/Create Round2 record and return progress + Stage 2 questions
+ * Requires: Valid JWT token
  */
-router.post('/round2', authenticateToken, requireRoundAccess(2), initializeRound2);
+router.post('/round2', authenticateToken, initializeRound2);
 
 /**
  * POST /api/gateway/finalround
- * Initialize Final Round
- * Requires: Valid JWT token and round access
+ * Initialize Final Round - Check/Create FinalRound record and return progress + clues
+ * Requires: Valid JWT token
  */
-router.post('/finalround', authenticateToken, requireRoundAccess(3), initializeFinalRound);
+router.post('/finalround', authenticateToken, initializeFinalRound);
 
 export default router;
+

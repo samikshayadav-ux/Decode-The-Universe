@@ -9,24 +9,27 @@ const initializeRounds = async () => {
       console.log('[MongoDB] Initializing default rounds...');
       const defaultRounds = [
         {
-          roundNumber: 1,
+          roundNumber: 0,
           status: 'pending',
           title: 'Quiz Round',
-          displayName: 'Round 1',
           description: 'Answer trivia questions to earn points'
+        },
+        {
+          roundNumber: 1,
+          status: 'pending',
+          title: 'Challenge Round 1',
+          description: 'Complete physical challenges'
         },
         {
           roundNumber: 2,
           status: 'pending',
-          title: 'Challenge Round',
-          displayName: 'Round 2',
+          title: 'Challenge Round 2',
           description: 'Solve puzzles and riddles'
         },
         {
           roundNumber: 3,
           status: 'pending',
           title: 'Final Round',
-          displayName: 'Final Round',
           description: 'Follow final clues to treasure location'
         }
       ];

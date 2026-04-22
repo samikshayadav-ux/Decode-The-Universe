@@ -61,16 +61,25 @@ export const initializeSocket = (serverURL = 'http://localhost:5000') => {
  * @param {number} roundNumber - Round number (0, 1, 2, 3)
  */
 export const joinRound = (roundNumber) => {
-  if (!socket || !socket.connected) {
-    console.error('[Socket.IO] Socket not connected');
+  if (!socket) {
+    console.error('[Socket.IO] Socket not initialized');
     return;
   }
 
-  try {
-    socket.emit('join_round', { roundNumber });
-    console.log(`[Socket.IO] Joined round ${roundNumber} leaderboard`);
-  } catch (error) {
-    console.error('[Socket.IO] Error joining round:', error);
+  const performJoin = () => {
+    try {
+      socket.emit('join_round', { roundNumber });
+      console.log(`[Socket.IO] Joined round ${roundNumber} leaderboard`);
+    } catch (error) {
+      console.error('[Socket.IO] Error joining round:', error);
+    }
+  };
+
+  if (socket.connected) {
+    performJoin();
+  } else {
+    console.log('[Socket.IO] Socket not connected yet, waiting for connect event to join room...');
+    socket.once('connect', performJoin);
   }
 };
 
@@ -80,7 +89,7 @@ export const joinRound = (roundNumber) => {
  */
 export const leaveRound = (roundNumber) => {
   if (!socket || !socket.connected) {
-    console.error('[Socket.IO] Socket not connected');
+    // Silently return if socket isn't ready or not connected
     return;
   }
 
@@ -99,7 +108,7 @@ export const leaveRound = (roundNumber) => {
  */
 export const subscribeToLeaderboard = (callback) => {
   if (!socket) {
-    console.error('[Socket.IO] Socket not initialized');
+    // Return a dummy unsubscribe if socket isn't ready
     return () => {};
   }
 
@@ -107,7 +116,9 @@ export const subscribeToLeaderboard = (callback) => {
 
   // Return unsubscribe function
   return () => {
-    socket.off('leaderboard:update', callback);
+    if (socket) {
+      socket.off('leaderboard:update', callback);
+    }
   };
 };
 
@@ -118,7 +129,7 @@ export const subscribeToLeaderboard = (callback) => {
  */
 export const subscribeToScoreChanges = (callback) => {
   if (!socket) {
-    console.error('[Socket.IO] Socket not initialized');
+    // Return a dummy unsubscribe if socket isn't ready
     return () => {};
   }
 
@@ -126,7 +137,9 @@ export const subscribeToScoreChanges = (callback) => {
 
   // Return unsubscribe function
   return () => {
-    socket.off('team:scoreChange', callback);
+    if (socket) {
+      socket.off('team:scoreChange', callback);
+    }
   };
 };
 

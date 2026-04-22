@@ -1,13 +1,11 @@
 import express from 'express';
-import { authenticateToken } from '../middleware/auth.js';
-import { requireRoundAccess } from '../middleware/roundAccess.js';
 import {
   getQuestions,
   submitAnswer,
   completeRound,
   getRoundProgress,
   startRound,
-  advanceRound1Stage
+  advanceRound2Stage
 } from '../controllers/quizController.js';
 
 const router = express.Router();
@@ -26,37 +24,40 @@ const validateRound = (req, res, next) => {
   next();
 };
 
-// Apply authentication to all quiz routes
-router.use(authenticateToken);
-
 /**
  * GET /api/quiz/:round/questions
  * Fetch all questions for a specific round
  */
-router.get('/:round/questions', validateRound, requireRoundAccess(), getQuestions);
+router.get('/:round/questions', validateRound, getQuestions);
 
 /**
  * POST /api/quiz/:round/start
  * Start a round (initialize progress)
  */
-router.post('/:round/start', validateRound, requireRoundAccess(), startRound);
+router.post('/:round/start', validateRound, startRound);
 
 /**
  * POST /api/quiz/:round/submit
  * Submit an answer for a question
  */
-router.post('/:round/submit', validateRound, requireRoundAccess(), submitAnswer);
+router.post('/:round/submit', validateRound, submitAnswer);
 
 /**
  * POST /api/quiz/:round/complete
  * Complete a round and finalize scores
  */
-router.post('/:round/complete', validateRound, requireRoundAccess(), completeRound);
+router.post('/:round/complete', validateRound, completeRound);
+
+/**
+ * POST /api/quiz/2/advance
+ * Advance to next stage for Round 2 with stage time tracking
+ */
+router.post('/2/advance', advanceRound2Stage);
 
 /**
  * GET /api/quiz/:round/progress/:teamId
  * Get team's progress for a specific round
  */
-router.get('/:round/progress/:teamId', validateRound, requireRoundAccess(), getRoundProgress);
+router.get('/:round/progress/:teamId', validateRound, getRoundProgress);
 
 export default router;

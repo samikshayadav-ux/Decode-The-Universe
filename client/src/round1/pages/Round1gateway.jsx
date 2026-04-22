@@ -1,99 +1,121 @@
-import React, { useEffect } from 'react';
+// src/round1/pages/Round1Gateway.jsx
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
-import { ShieldCheck, Terminal, ArrowLeft, ArrowRight, Activity } from 'lucide-react';
+import { Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '../../auth/AuthContext';
 
 const Round1Gateway = () => {
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  
   const navigate = useNavigate();
   const { isLoggedIn, authData } = useAuth();
-  const isUnlocked = authData?.unlockedRounds?.includes(1);
 
+  const correctPassword = 'KLE&3h9jd';
+
+  // Store intended round and handle logged-in users
   useEffect(() => {
-    // If already logged in and unlocked, maybe just go straight?
-    // User said: "from round 2-3 directly open if logged in"
-    // For Round 1: "ask me to register/login"
-    if (isLoggedIn && isUnlocked) {
-      // navigate('/round1/game', { replace: true });
+    // Store the intended round for login redirect
+    localStorage.setItem('intendedRound', 'round1');
+    
+    if (isLoggedIn && authData) {
+      // Only redirect if already logged in for THIS round (round1)
+      const userRound = authData.allowedRound;
+      const isRound1 = userRound === 'round1' || userRound === 1;
+      
+      if (isRound1) {
+        console.log('User already logged in for round1, redirecting to game');
+        navigate('/round1/game', { replace: true });
+      }
     }
-  }, [isLoggedIn, isUnlocked, navigate]);
+  }, [isLoggedIn, authData, navigate]);
 
-  const handleProceed = () => {
-    if (!isLoggedIn) {
-      navigate('/auth', { state: { from: { pathname: '/round1/game' } } });
-    } else {
-      navigate('/round1/game');
-    }
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    setIsLoading(true);
+    setError('');
+
+    setTimeout(() => {
+      if (password.trim() === correctPassword) {
+        // Redirect to authentication page with round context
+        navigate('/auth', { state: { from: { pathname: '/round1' } } });
+      } else {
+        setError('Invalid key. Try again.');
+        setIsLoading(false);
+      }
+    }, 800);
   };
 
   return (
-    <div className="min-h-screen bg-black text-white font-mono grid-bg p-6 md:p-16 flex flex-col relative overflow-hidden">
-      <div className="scanline" />
+    <div className="min-h-screen bg-gray-950 flex items-center justify-center px-4">
+      {/* Background effects */}
+      <div className="absolute inset-0 bg-gradient-to-br from-gray-900 via-gray-950 to-black"></div>
       
-      <div className="flex justify-between items-center z-10 mb-20">
-        <button 
-          onClick={() => navigate('/')} 
-          className="flex items-center gap-2 font-black uppercase text-xs md:text-sm hover:text-accent transition-colors group"
-        >
-          <ArrowLeft size={18} className="group-hover:-translate-x-1 transition-transform" />
-          <span>BACK_TO_HOME</span>
-        </button>
-        
-        <div className="flex items-center gap-2 bg-white/5 border border-white/10 px-3 py-1.5">
-          <Activity size={14} className={isLoggedIn ? 'text-green-500' : 'text-gray-500'} />
-          <div className="text-right">
-            <div className="text-[8px] text-white/40 font-bold uppercase tracking-widest leading-none">TERMINAL_STATUS</div>
-            <div className="text-accent font-black uppercase tracking-tighter text-[10px]">
-              {authData?.teamName || 'GUEST_UNAFFILIATED'}
-            </div>
-          </div>
+      {/* Main card */}
+      <div className="relative z-10 bg-gray-950 border-2 border-gray-600 rounded-xl p-8 w-full max-w-md shadow-2xl">
+        {/* Title */}
+        <div className="text-center mb-8">
+          <h1 className="text-3xl font-bold text-white mb-2 tracking-tight">
+            ROUND 1
+          </h1>
+          <p className="text-gray-400 text-sm font-mono">
+            Enter Access Key to Continue
+          </p>
         </div>
-      </div>
 
-      <div className="flex-1 flex flex-col items-center justify-center z-10">
-        <motion.div
-           initial={{ y: 20, opacity: 0 }}
-           animate={{ y: 0, opacity: 1 }}
-           className="w-full max-w-md border-4 border-white p-8 bg-black relative"
-        >
-          <div className="absolute -top-4 -left-4 bg-white text-black px-3 py-1 font-black italic">
-            SECURE_GATE_01
-          </div>
-
-          <div className="mb-12">
-            <h1 className="text-5xl font-black tracking-tighter uppercase italic mb-2">ROUND 1</h1>
-            <div className="flex items-center gap-2 text-accent text-[10px] font-black tracking-[0.3em]">
-              <ShieldCheck size={12} />
-              <span>ACCESS_PROTOCOL: {isUnlocked ? 'AUTHORIZED' : 'PENDING_AUTH'}</span>
-            </div>
-          </div>
-
-          <div className="space-y-6">
-            <p className="text-xs text-white/60 leading-relaxed">
-              WELCOME TO THE FIRST SEQUENCE. YOUR TEAM IDENTITY MUST BE VERIFIED BEFORE PROCEEDING TO THE CORE SYSTEM.
-            </p>
-
+        {/* Input form */}
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div className="relative w-full">
+            <input
+              type={showPassword ? 'text' : 'password'}
+              className="w-full p-3 pr-10 border border-gray-800 rounded-md focus:outline-none focus:border-blue-500 text-white font-mono placeholder-gray-600 bg-transparent transition-colors"
+              placeholder="Enter The Access Key"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              disabled={isLoading}
+              autoFocus
+            />
             <button
-              onClick={handleProceed}
-              className="w-full border-4 border-white bg-white text-black py-6 flex items-center justify-center gap-4 text-xl font-black uppercase tracking-tighter hover:bg-black hover:text-white transition-all duration-150"
+              type="button"
+              onClick={() => setShowPassword((prev) => !prev)}
+              className="absolute right-3 top-1/2 transform -translate-y-1/2 cursor-pointer text-gray-400 hover:text-white transition-colors disabled:opacity-50"
+              disabled={isLoading}
             >
-              <span>{isLoggedIn ? 'PROCEED TO GAME' : 'LOGIN / REGISTER'}</span>
-              <ArrowRight size={20} />
+              {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
             </button>
+
+            {error && (
+              <p className="mt-2 text-sm text-red-500 font-mono flex items-center">
+                <span className="text-red-500 mr-1"></span>
+                {error}
+              </p>
+            )}
           </div>
-        </motion.div>
 
-        <p className="mt-12 text-white/20 text-[10px] font-bold uppercase tracking-widest text-center max-w-xs leading-loose">
-          SIGNAL_STRENGTH: OPTIMAL <br />
-          DECODE_SEQUENCE_READY
-        </p>
-      </div>
-
-      <div className="absolute bottom-[-10%] right-[-10%] opacity-5 hidden lg:block">
-        <Terminal size={600} strokeWidth={1} />
+          <button
+            type="submit"
+            disabled={isLoading || !password.trim()}
+            className={`w-full py-3 px-4 rounded-md font-mono font-medium border transition-colors ${
+              isLoading || !password.trim()
+                ? 'border-gray-800 text-gray-500 cursor-not-allowed'
+                : 'border-blue-500 text-blue-500 hover:bg-blue-500/10 active:bg-blue-500/20'
+            }`}
+          >
+            {isLoading ? (
+              <span className="flex items-center justify-center">
+                <span className="animate-pulse mr-2"></span>
+                VERIFYING...
+              </span>
+            ) : (
+              'Unlock'
+            )}
+          </button>
+        </form>
       </div>
     </div>
   );
 };
 
-export default Round1Gateway;
+export default Round1Gateway;

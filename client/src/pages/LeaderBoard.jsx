@@ -1,25 +1,89 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Trophy, Clock, Terminal, ChevronUp, ChevronDown } from 'lucide-react';
-import { initializeSocket, joinRound, leaveRound, subscribeToLeaderboard } from '../utils/socketClient';
+import { initializeSocket, joinRound, leaveRound, subscribeToLeaderboard, subscribeToScoreChanges, disconnectSocket } from '../utils/socketClient';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
 const LeaderBoard = () => {
   const [teams, setTeams] = useState([]);
-  const [currentRound, setCurrentRound] = useState(1);
+  const [currentRound, setCurrentRound] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [connected, setConnected] = useState(false);
   
   const previousPositionsRef = useRef({});
+  const positionChangeTimersRef = useRef({});
+  const [positionChanges, setPositionChanges] = useState({});
   const unsubscribeRef = useRef(null);
 
   const formatTime = useCallback((seconds) => {
-    if (!seconds && seconds !== 0) return '00:00';
-    const adjustedSeconds = Math.floor(seconds);
+    if (!seconds && seconds !== 0) return '--:--';
+    const adjustedSeconds = seconds + 1;
     const mins = Math.floor(adjustedSeconds / 60);
     const secs = adjustedSeconds % 60;
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  }, []);
+
+  const processLeaderboard = useCallback((data) => {
+    if (!data || !Array.isArray(data) || data.length === 0) {
+      setTeams([]);
+      return;
+    }
+
+    const processedTeams = data.map((team, index) => ({
+      // FIX 1: Guaranteed unique teamId with index fallback
+      teamId: team.teamId || team.team_id || `team-fallback-${index}`,
+      teamName: team.teamName || team.team_name,
+      score: team.score || 0,
+      displayTime: team.answers?.length > 0
+        ? (team.completedAt || team.completed_at
+            ? team.totalTimeSpent || team.total_time_spent
+            : team.timeAtLastSubmission || team.time_at_last_submission)
+        : null,
+      sortTime: team.answers?.length > 0
+        ? (team.completedAt || team.completed_at
+            ? team.totalTimeSpent || team.total_time_spent
+            : team.timeAtLastSubmission || team.time_at_last_submission) || Infinity
+        : Infinity,
+      lastSubmittedAt: team.updatedAt || team.updated_at
+    }));
+
+    const sortedTeams = [...processedTeams].sort((a, b) => {
+      if (b.score !== a.score) return b.score - a.score;
+      if (a.sortTime !== b.sortTime) return a.sortTime - b.sortTime;
+      return new Date(a.lastSubmittedAt) - new Date(b.lastSubmittedAt);
+    });
+
+    const newPositionChanges = {};
+    sortedTeams.forEach((team, currentIndex) => {
+      const teamId = team.teamId;
+      const previousIndex = previousPositionsRef.current[teamId];
+      if (previousIndex !== undefined && previousIndex !== currentIndex) {
+        const change = previousIndex - currentIndex;
+        newPositionChanges[teamId] = change;
+
+        if (positionChangeTimersRef.current[teamId]) {
+          clearTimeout(positionChangeTimersRef.current[teamId]);
+        }
+
+        positionChangeTimersRef.current[teamId] = setTimeout(() => {
+          setPositionChanges(prev => {
+            const updated = { ...prev };
+            delete updated[teamId];
+            return updated;
+          });
+          delete positionChangeTimersRef.current[teamId];
+        }, 60000);
+      }
+    });
+
+    const currentPositions = {};
+    sortedTeams.forEach((team, index) => {
+      currentPositions[team.teamId] = index;
+    });
+    previousPositionsRef.current = currentPositions;
+
+    setPositionChanges(newPositionChanges);
+    setTeams(sortedTeams);
   }, []);
 
   const fetchLeaderboard = useCallback(async (roundNum = currentRound) => {
@@ -27,183 +91,161 @@ const LeaderBoard = () => {
       setLoading(true);
       const response = await fetch(`${API_URL}/api/leaderboard/${roundNum}`);
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      const data = await response.json();
-      processLeaderboard(data);
+      const result = await response.json();
+      setError(null);
+      
+      if (result.status === 'success' && result.data && Array.isArray(result.data.leaderboard)) {
+        processLeaderboard(result.data.leaderboard);
+      } else {
+        processLeaderboard([]);
+      }
     } catch (err) {
       console.error('Error fetching leaderboard:', err);
+      setError('Failed to load leaderboard');
     } finally {
       setLoading(false);
     }
-  }, [currentRound]);
-
-  const processLeaderboard = useCallback((data) => {
-    if (!data || data.length === 0) {
-      setTeams([]);
-      return;
-    }
-
-    const processedTeams = data.map(team => ({
-      team_id: team.team_id || team.teamId,
-      team_name: team.team_name || team.teamName,
-      score: team.score || 0,
-      round: team.currentRound || currentRound,
-      displayTime: team.displayTime || team.totalTimeSpent || 0,
-    }));
-
-    const sortedTeams = [...processedTeams].sort((a, b) => {
-      if (b.score !== a.score) return b.score - a.score;
-      return a.displayTime - b.displayTime;
-    });
-
-    const newPositionChanges = {};
-    sortedTeams.forEach((team, currentIndex) => {
-      const id = team.team_id;
-      const previousIndex = previousPositionsRef.current[id];
-      if (previousIndex !== undefined && previousIndex !== currentIndex) {
-        newPositionChanges[id] = previousIndex - currentIndex;
-      }
-      previousPositionsRef.current[id] = currentIndex;
-    });
-
-    setTeams(sortedTeams);
-  }, [currentRound]);
+  }, [currentRound, processLeaderboard]);
 
   useEffect(() => {
-    let socket;
+    let unsubscribeScores = null;
+    let pollInterval = null;
+
     const setupSocket = async () => {
       try {
         await fetchLeaderboard(currentRound);
-        socket = initializeSocket(API_URL);
-        if (socket) {
-          joinRound(currentRound);
-          setConnected(true);
-          unsubscribeRef.current = subscribeToLeaderboard((data) => {
-            const leaderboardData = Array.isArray(data) ? data : (data.leaderboard || []);
-            processLeaderboard(leaderboardData);
-          });
+
+        const socket = initializeSocket(API_URL);
+        if (!socket) {
+          setError('Failed to connect to socket');
+          return;
         }
+
+        joinRound(currentRound);
+        setConnected(true);
+
+        unsubscribeRef.current = subscribeToLeaderboard((data) => {
+          console.log('Leaderboard update received:', data);
+          if (data && Array.isArray(data)) {
+            processLeaderboard(data);
+          }
+        });
+
+        unsubscribeScores = subscribeToScoreChanges(() => {
+          console.log('Score change detected');
+          fetchLeaderboard(currentRound);
+        });
       } catch (err) {
         console.error('Socket setup error:', err);
+        setError('Connection error - using polling');
+        pollInterval = setInterval(() => fetchLeaderboard(currentRound), 5000);
       }
     };
 
     setupSocket();
+
     return () => {
       if (unsubscribeRef.current) unsubscribeRef.current();
+      if (unsubscribeScores) unsubscribeScores();
+      if (pollInterval) clearInterval(pollInterval);
       leaveRound(currentRound);
+      Object.values(positionChangeTimersRef.current).forEach(timer => clearTimeout(timer));
+      disconnectSocket();
     };
   }, [currentRound, fetchLeaderboard, processLeaderboard]);
 
-  const rounds = [
-    { id: 1, name: 'PHASE_01' },
-    { id: 2, name: 'PHASE_02' },
-    { id: 3, name: 'FINAL' }
-  ];
-
   return (
-    <div className="min-h-screen bg-bg text-[#F5F5F5] font-sans grid-bg-tech p-6 md:p-12 relative overflow-hidden">
-      <div className="scanline opacity-5" />
-      
-      <div className="max-w-6xl mx-auto relative z-10">
-        {/* Minimal Header */}
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-8 mb-16 px-2">
-          <div className="space-y-4">
-            <div className="flex items-center gap-2 text-accent text-[10px] font-black uppercase tracking-[0.4em]">
-              <Terminal size={14} />
-              <span>DATA_STREAM // GLOBAL_RANKINGS</span>
-            </div>
-            <h1 className="text-5xl md:text-7xl font-black tracking-tighter uppercase italic leading-none">
-              LEADER<span className="text-accent underline decoration-white/10">BOARD</span>
-            </h1>
-          </div>
-
-          <div className="flex items-center gap-4 bg-surface border border-white/10 px-5 py-2.5 rounded-full">
-            <div className={`w-2 h-2 rounded-full ${connected ? 'bg-accent animate-pulse' : 'bg-red-500'}`} />
-            <span className="text-[10px] font-black tracking-widest opacity-40 uppercase">
-              {connected ? 'NODE_SYNCED' : 'OFFLINE'}
-            </span>
+    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-white px-6 py-8">
+      <div className="max-w-6xl mx-auto">
+        {/* Header */}
+        <div className="mb-8">
+          <h1 className="text-5xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-purple-500 mb-2">
+            Global Leaderboard
+          </h1>
+          <div className="flex items-center gap-3 text-sm">
+            {connected && <span className="text-green-400">● Live Connected</span>}
+            {error && <span className="text-red-400">⚠ {error}</span>}
+            {loading && !teams.length && <span className="text-yellow-400">⟳ Loading...</span>}
           </div>
         </div>
 
-        {/* Phase Selector */}
-        <div className="flex gap-1 bg-surface border border-white/5 p-1 mb-12 w-fit">
-          {rounds.map((round) => (
+        {/* Round selector */}
+        <div className="mb-6 flex gap-3">
+          {[0, 1, 2, 3].map(round => (
             <button
-              key={round.id}
-              onClick={() => setCurrentRound(round.id)}
-              className={`px-8 py-3 text-[10px] font-black tracking-widest transition-all ${
-                currentRound === round.id 
-                  ? 'bg-white text-black' 
-                  : 'text-white/40 hover:text-white hover:bg-white/5'
+              key={round}
+              onClick={() => setCurrentRound(round)}
+              className={`px-4 py-2 rounded-lg font-semibold transition-all ${
+                currentRound === round
+                  ? 'bg-gradient-to-r from-blue-600 to-purple-600 shadow-lg'
+                  : 'bg-gray-700 hover:bg-gray-600'
               }`}
             >
-              {round.name}
+              Round {round}
             </button>
           ))}
         </div>
 
-        {/* Main Table */}
-        <div className="neo-box overflow-hidden mb-12 bg-white">
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="border-b-2 border-black/10 bg-white text-black">
-                <th className="p-6 text-[10px] font-black tracking-widest uppercase w-24">RANK</th>
-                <th className="p-6 text-[10px] font-black tracking-widest uppercase text-left">TEAM_ENTITY</th>
-                <th className="p-6 text-[10px] font-black tracking-widest uppercase text-center w-32">SCORE</th>
-                <th className="p-6 text-[10px] font-black tracking-widest uppercase text-right w-40">ELAPSED_TIME</th>
+        {/* Leaderboard Table */}
+        <div className="bg-gray-800/50 backdrop-blur-sm rounded-xl shadow-2xl overflow-hidden border border-gray-700/50">
+          <table className="w-full">
+            <thead className="bg-gradient-to-r from-blue-900/50 to-purple-900/50 sticky top-0">
+              <tr>
+                <th className="p-4 text-left text-gray-300">Rank</th>
+                <th className="p-4 text-left text-gray-300">Team Name</th>
+                <th className="p-4 text-center text-gray-300">Score</th>
+                <th className="p-4 text-right text-gray-300">Time</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-black/5 font-mono bg-white text-black">
-              <AnimatePresence mode="popLayout">
-                {teams.map((team, index) => (
-                  <motion.tr
-                    layout
-                    key={team.team_id}
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    className={`group hover:bg-bg/5 transition-colors ${index < 3 ? 'bg-black/[0.02]' : ''}`}
-                  >
-                    <td className="p-6">
-                      <span className={`text-3xl font-black italic tracking-tighter ${index === 0 ? 'text-accent' : 'text-black'}`}>
-                        {(index + 1).toString().padStart(2, '0')}
-                      </span>
-                    </td>
-                    <td className="p-6">
-                      <div className="flex flex-col">
-                        <span className="text-lg font-black uppercase tracking-tight group-hover:text-accent transition-colors">
-                          {team.team_name}
+            <tbody className="divide-y divide-gray-700/30">
+              {teams.length > 0 ? (
+                teams.map((team, index) => {
+                  const positionChange = positionChanges[team.teamId];
+                  const hasPositionChange = typeof positionChange === 'number' && positionChange !== 0;
+
+                  return (
+                    <tr
+                      key={`${team.teamId ?? 'unknown'}-${index}`} // FIX 2: Always unique key
+                      className="border-t border-gray-700/30 hover:bg-gray-700/20 transition-colors"
+                    >
+                      <td className="p-4">
+                        <div className="flex items-center gap-2">
+                          <span className={`font-bold text-lg ${
+                            index === 0 ? 'text-yellow-400' :
+                            index === 1 ? 'text-gray-300' :
+                            index === 2 ? 'text-orange-400' :
+                            'text-gray-400'
+                          }`}>
+                            {index + 1}
+                          </span>
+                          {hasPositionChange && (
+                            <span className={`text-xs font-bold ${positionChange > 0 ? 'text-green-400' : 'text-red-400'}`}>
+                              {positionChange > 0 ? '↑' : '↓'} {Math.abs(positionChange)}
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                      <td className="p-4 font-medium">{team.teamName}</td>
+                      <td className="p-4 text-center">
+                        <span className="inline-flex items-center px-3 py-1 rounded-full bg-blue-900/50 text-blue-200 font-semibold">
+                          {team.score}
                         </span>
-                        <span className="text-[10px] opacity-30 font-bold">UID: {team.team_id.slice(0, 8)}</span>
-                      </div>
-                    </td>
-                    <td className="p-6 text-center">
-                      <span className="bg-bg/5 px-4 py-1 border border-black/10 text-xl font-black">
-                        {team.score.toString().padStart(3, '0')}
-                      </span>
-                    </td>
-                    <td className="p-6 text-right font-black text-xl tabular-nums tracking-tighter">
-                      {formatTime(team.displayTime)}
-                    </td>
-                  </motion.tr>
-                ))}
-              </AnimatePresence>
+                      </td>
+                      <td className="p-4 text-right font-mono text-gray-400">
+                        {team.displayTime !== null ? formatTime(team.displayTime) : '--:--'}
+                      </td>
+                    </tr>
+                  );
+                })
+              ) : (
+                <tr>
+                  <td colSpan="4" className="p-12 text-center text-gray-500">
+                    {loading ? 'Loading leaderboard data...' : 'No teams found'}
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
-          
-          {teams.length === 0 && !loading && (
-            <div className="p-20 text-center text-[10px] font-black tracking-[0.5em] opacity-20 uppercase">
-              NO_ENTRIES_IN_DATAFEED
-            </div>
-          )}
-        </div>
-
-        {/* Footer Info */}
-        <div className="flex justify-between items-center opacity-30 font-mono text-[8px] font-black tracking-[0.4em] uppercase">
-          <div>TIME_SYNC_UTC: {new Date().toISOString().split('T')[1].slice(0, 8)}</div>
-          <div className="flex items-center gap-2">
-             <Trophy size={10} />
-             <span>DECODE_PROTOCOL_v4</span>
-          </div>
         </div>
       </div>
     </div>

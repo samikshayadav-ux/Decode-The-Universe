@@ -17,6 +17,9 @@ export const loadQuestions = (roundNumber) => {
 
     switch (roundNumber) {
       case 1:
+        // filePath = join(dataDir, 'round0_questions.json');
+        break;
+      case 2:
         filePath = join(dataDir, 'round1_questions.json');
         break;
       case 3:

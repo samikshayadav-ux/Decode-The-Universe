@@ -273,85 +273,6 @@ async function getLeaderboard(roundNumber) {
   }
 }
 
-/**
- * Unlock a specific round for a team
- * 
- * @param {string} teamId - MongoDB ObjectId of the team
- * @param {number} roundNumber - Round number to unlock
- * @returns {Promise<Object>} Updated team's unlockedRounds data
- */
-async function unlockRoundForTeam(teamId, roundNumber) {
-  try {
-    const headers = getAdminHeaders();
-    const response = await fetch(`${API_URL}/api/admin/teams/${teamId}/unlock-round/${roundNumber}`, {
-      method: 'PUT',
-      headers
-    });
-
-    if (!response.ok) {
-      const error = await response.json().catch(() => ({}));
-      throw new Error(error.message || `Failed to unlock round: ${response.status}`);
-    }
-
-    return await response.json();
-  } catch (error) {
-    console.error('Error unlocking round for team:', error);
-    throw error;
-  }
-}
-
-/**
- * Force advance a team to the next round
- * 
- * @param {string} teamId - MongoDB ObjectId of the team
- * @returns {Promise<Object>} Updated team progress data
- */
-async function forceAdvanceTeam(teamId) {
-  try {
-    const headers = getAdminHeaders();
-    const response = await fetch(`${API_URL}/api/admin/teams/${teamId}/advance`, {
-      method: 'PUT',
-      headers
-    });
-
-    if (!response.ok) {
-      const error = await response.json().catch(() => ({}));
-      throw new Error(error.message || `Failed to advance team: ${response.status}`);
-    }
-
-    return await response.json();
-  } catch (error) {
-    console.error('Error advancing team:', error);
-    throw error;
-  }
-}
-
-/**
- * Unlock a round for all teams globally
- * 
- * @param {string} roundId - MongoDB ObjectId or round number
- * @returns {Promise<Object>} Success message
- */
-async function unlockRoundGlobally(roundId) {
-  try {
-    const headers = getAdminHeaders();
-    const response = await fetch(`${API_URL}/api/admin/rounds/${roundId}/unlock-all`, {
-      method: 'PUT',
-      headers
-    });
-
-    if (!response.ok) {
-      const error = await response.json().catch(() => ({}));
-      throw new Error(error.message || `Failed to unlock round globally: ${response.status}`);
-    }
-
-    return await response.json();
-  } catch (error) {
-    console.error('Error unlocking round globally:', error);
-    throw error;
-  }
-}
-
 export {
   getAllRounds,
   setRoundLive,
@@ -360,9 +281,5 @@ export {
   updateTeam,
   deleteTeam,
   getLeaderboard,
-  getAdminHeaders,
-  unlockRoundForTeam,
-  forceAdvanceTeam,
-  unlockRoundGlobally
+  getAdminHeaders
 };
-

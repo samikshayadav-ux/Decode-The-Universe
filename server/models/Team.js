@@ -35,23 +35,6 @@ const teamSchema = new mongoose.Schema(
       type: Date,
       default: null
     },
-    currentRound: {
-      type: Number,
-      default: 1
-    },
-    unlockedRounds: {
-      type: [Number],
-      default: [1]
-    },
-    completionStatus: {
-      type: Map,
-      of: String,
-      default: {}
-    },
-    forceUnlockedRounds: {
-      type: [Number],
-      default: []
-    },
     createdAt: {
       type: Date,
       default: Date.now,

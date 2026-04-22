@@ -9,10 +9,7 @@ import {
   updateTeam,
   deleteTeam,
   resetTeamRound,
-  unlockRoundForTeam,
-  forceAdvanceTeam,
-  getLeaderboard,
-  unlockRoundGlobally
+  getLeaderboard
 } from '../controllers/adminController.js';
 
 const router = express.Router();
@@ -54,12 +51,6 @@ router.put('/rounds/:id/live', setRoundLive);
 router.put('/rounds/:id/end', endRound);
 
 /**
- * PUT /api/admin/rounds/:id/unlock-all
- * Unlock a specific round for all teams
- */
-router.put('/rounds/:id/unlock-all', unlockRoundGlobally);
-
-/**
  * GET /api/admin/teams
  * Get all teams with their progress
  */
@@ -88,18 +79,6 @@ router.delete('/teams/:id', deleteTeam);
  * Reset team progress for a specific round
  */
 router.post('/teams/:id/reset-round/:roundNumber', resetTeamRound);
-
-/**
- * PUT /api/admin/teams/:id/unlock-round/:roundNumber
- * Unlock a specific round for a team
- */
-router.put('/teams/:id/unlock-round/:roundNumber', unlockRoundForTeam);
-
-/**
- * PUT /api/admin/teams/:id/advance
- * Force advance team to the next round
- */
-router.put('/teams/:id/advance', forceAdvanceTeam);
 
 /**
  * GET /api/admin/leaderboard

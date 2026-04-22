@@ -2,7 +2,7 @@ import { Round1, Round2, FinalRound, Team, Round } from '../models/index.js';
 import { loadQuestions, loadClues } from '../utils/loadQuestions.js';
 
 /**
- * Initialize Round 1 (Quiz) - Check/Create Round1 record and return progress + questions
+ * Initialize Round 1 - Check/Create Round1 record and return progress + questions
  * @param {Object} req - Express request object
  * @param {Object} res - Express response object
  */
@@ -62,7 +62,20 @@ export const initializeRound1 = async (req, res) => {
     }
 
     console.log(`[Gateway Controller] Round 1 initialized for team ${teamId}`);
+    console.log(`[Gateway Controller] Round1 Record Details:`, {
+      teamId: round1Record.teamId,
+      status: round1Record.status,
+      currentQuestion: round1Record.currentQuestion,
+      score: round1Record.score,
+      timeLeft: round1Record.timeLeft,
+      answersCount: round1Record.answers.length,
+      totalTimeSpent: round1Record.totalTimeSpent,
+      timeAtLastSubmission: round1Record.timeAtLastSubmission,
+      createdAt: round1Record.createdAt,
+      updatedAt: round1Record.updatedAt
+    });
 
+    // DO NOT send correct answers to frontend for security - verify answers on backend instead
     return res.status(200).json({
       status: 'success',
       data: {
@@ -92,6 +105,7 @@ export const initializeRound1 = async (req, res) => {
           id: q.id,
           question: q.question,
           options: q.options
+          // DO NOT include: answer (for security)
         })),
         totalQuestions: questions.length
       }
@@ -107,7 +121,7 @@ export const initializeRound1 = async (req, res) => {
 };
 
 /**
- * Initialize Round 2 - Check/Create Round2 record and return progress
+ * Initialize Round 2 - Check/Create Round2 record and return progress + Stage 2 questions
  * @param {Object} req - Express request object
  * @param {Object} res - Express response object
  */
@@ -126,6 +140,7 @@ export const initializeRound2 = async (req, res) => {
     let round2Record = await Round2.findByTeamId(teamId);
 
     if (!round2Record) {
+      // Get team info for teamName
       const team = await Team.findOne({ teamId });
       
       if (!team) {
@@ -135,11 +150,12 @@ export const initializeRound2 = async (req, res) => {
         });
       }
 
+      // Create new Round2 record with defaults
       round2Record = new Round2({
         teamId,
         teamName: team.teamName,
         currentStage: 1,
-        answers: [],
+        stage1Answers: [],
         totalTimeSpent: 0,
         stageTimes: [
           {
@@ -150,15 +166,31 @@ export const initializeRound2 = async (req, res) => {
           }
         ],
         status: 'in_progress',
-        startedAt: new Date()
+        startedAt: new Date(),
+        completionType: null
       });
 
       await round2Record.save();
       console.log(`[Gateway Controller] Created new Round2 record for team ${teamId}`);
     }
 
-    console.log(`[Gateway Controller] Round 2 initialized for team ${teamId}`);
+    // Round 2 uses Game1-Game10 components on frontend
+    // We don't need to load questions from JSON, but we'll return an empty array
+    // to maintain the API structure if needed
+    let questions = [];
 
+    console.log(`[Gateway Controller] Round 2 initialized for team ${teamId}`);
+    console.log(`[Gateway Controller] Round2 Record Details:`, {
+      teamId: round2Record.teamId,
+      status: round2Record.status,
+      currentStage: round2Record.currentStage,
+      answersCount: round2Record.stage1Answers ? round2Record.stage1Answers.length : 0,
+      totalTimeSpent: round2Record.totalTimeSpent,
+      createdAt: round2Record.createdAt,
+      updatedAt: round2Record.updatedAt
+    });
+
+    // DO NOT send correct answers to frontend for security - verify answers on backend instead
     return res.status(200).json({
       status: 'success',
       data: {
@@ -167,13 +199,23 @@ export const initializeRound2 = async (req, res) => {
           teamId: round2Record.teamId,
           teamName: round2Record.teamName,
           currentStage: round2Record.currentStage,
-          answers: round2Record.answers,
+          stage1Answers: (round2Record.stage1Answers || []).map(ans => ({
+            questionId: ans.questionId,
+            answer: ans.answer,
+            isCorrect: ans.isCorrect,
+            timestamp: ans.timestamp
+          })),
+          answersCount: round2Record.stage1Answers ? round2Record.stage1Answers.length : 0,
           status: round2Record.status,
           totalTimeSpent: round2Record.totalTimeSpent,
           stageTimes: round2Record.stageTimes,
           startedAt: round2Record.startedAt,
-          completedAt: round2Record.completedAt
-        }
+          lastAnswerTime: round2Record.lastAnswerTime,
+          completedAt: round2Record.completedAt,
+          completionType: round2Record.completionType
+        },
+        questions: questions,
+        totalQuestions: 10 // Round 2 has 10 games
       }
     });
   } catch (error) {
