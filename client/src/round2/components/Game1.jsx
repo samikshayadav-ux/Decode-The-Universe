@@ -46,7 +46,7 @@ const Game1 = ({ onComplete }) => {
       const x = padding + Math.random() * (100 - 2 * padding);
       const y = padding + Math.random() * (100 - 2 * padding);
 
-      if (!positions.some((p) => Math.abs(p.x - x) < 8 && Math.abs(p.y - y) < 8)) {
+      if (!positions.some((p) => Math.abs(p.x - x) < 6 && Math.abs(p.y - y) < 4)) {
         positions.push({ x, y });
       }
     }
@@ -54,7 +54,7 @@ const Game1 = ({ onComplete }) => {
   };
 
   useEffect(() => {
-    const totalButtons = 40;
+    const totalButtons = 50;
     const positions = generatePositions(totalButtons);
     const realButtonIndex = Math.floor(Math.random() * totalButtons);
 
@@ -71,6 +71,29 @@ const Game1 = ({ onComplete }) => {
     });
 
     setButtons(newButtons);
+
+    // Block Inspect and Shortcuts
+    const handleContextMenu = (e) => e.preventDefault();
+    const handleKeyDown = (e) => {
+      // F12
+      if (e.keyCode === 123) {
+        e.preventDefault();
+        return false;
+      }
+      // Ctrl+Shift+I, Ctrl+Shift+J, Ctrl+Shift+C, Ctrl+U
+      if (e.ctrlKey && (e.shiftKey && (e.keyCode === 73 || e.keyCode === 74 || e.keyCode === 67) || e.keyCode === 85)) {
+        e.preventDefault();
+        return false;
+      }
+    };
+
+    window.addEventListener('contextmenu', handleContextMenu);
+    window.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      window.removeEventListener('contextmenu', handleContextMenu);
+      window.removeEventListener('keydown', handleKeyDown);
+    };
   }, []);
 
   const handleClick = (btn) => {
@@ -97,21 +120,17 @@ const Game1 = ({ onComplete }) => {
           key={btn.id}
           initial={{ scale: 0, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
-          whileHover={{ scale: 1.1, zIndex: 20 }}
-          whileTap={{ scale: 0.9 }}
+          whileHover={{ scale: 1.05, zIndex: 20 }}
+          whileTap={{ scale: 0.95 }}
           onClick={() => handleClick(btn)}
-          className={`absolute px-4 py-2 rounded-xl font-black text-[10px] uppercase tracking-widest shadow-xl transition-colors ${
-            btn.type === 'real' 
-              ? 'bg-blue-600 text-white shadow-blue-500/20' 
-              : 'bg-white/10 hover:bg-white/20 text-white/40'
-          }`}
+          className="absolute px-5 py-2.5 rounded-lg font-black text-[11px] uppercase tracking-tighter shadow-xl transition-colors bg-yellow-400 text-black hover:bg-yellow-500 border border-yellow-300"
           style={{
             top: `${btn.y}%`,
             left: `${btn.x}%`,
             transform: 'translate(-50%, -50%)',
           }}
         >
-          {btn.type === 'real' ? 'Primary' : 'Access'}
+          Click Me
         </motion.button>
       ))}
 
