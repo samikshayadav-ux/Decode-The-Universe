@@ -18,9 +18,21 @@ export default function Game3({ onComplete }) {
   const [message, setMessage] = useState("");
   const [searchWarning, setSearchWarning] = useState(false);
 
-  // Block CTRL+F and browser search
+  // Block CTRL+F, browser search, and Inspect
   useEffect(() => {
+    const handleContextMenu = (e) => e.preventDefault();
     const handleKeyDown = (e) => {
+      // F12
+      if (e.keyCode === 123) {
+        e.preventDefault();
+        return false;
+      }
+      // Ctrl+Shift+I, Ctrl+Shift+J, Ctrl+Shift+C, Ctrl+U
+      if (e.ctrlKey && (e.shiftKey && (e.keyCode === 73 || e.keyCode === 74 || e.keyCode === 67) || e.keyCode === 85)) {
+        e.preventDefault();
+        return false;
+      }
+      // CTRL+F
       if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
         e.preventDefault();
         setSearchWarning(true);
@@ -28,8 +40,12 @@ export default function Game3({ onComplete }) {
       }
     };
 
+    window.addEventListener('contextmenu', handleContextMenu);
     window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('contextmenu', handleContextMenu);
+      window.removeEventListener('keydown', handleKeyDown);
+    };
   }, []);
 
   // Extended text with exactly 15 instances of the keyword
