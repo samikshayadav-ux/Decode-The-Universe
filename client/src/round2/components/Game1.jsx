@@ -117,42 +117,48 @@ const Game1 = ({ onComplete }) => {
   };
 
   return (
-    <div className="w-full h-full relative overflow-hidden bg-black/40 rounded-[2rem] border border-white/5 backdrop-blur-sm">
-      <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-20">
-        <h2 className="text-[15vw] font-black text-white/5 select-none uppercase tracking-tighter">Decoy</h2>
+    <div className="w-full h-full relative overflow-hidden bg-gradient-to-br from-slate-900 via-black to-slate-950">
+      <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-10">
+        <h2 className="text-[15vw] font-black text-white/30 select-none uppercase tracking-tighter">Decoy</h2>
       </div>
 
-      {buttons.map((btn) => (
-        <motion.button
-          key={btn.id}
-          initial={{ scale: 0, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          whileHover={{ scale: 1.05, zIndex: 20 }}
-          whileTap={{ scale: 0.95 }}
-          onClick={() => handleClick(btn)}
-          className="absolute px-5 py-2.5 rounded-lg font-black text-[11px] uppercase tracking-tighter shadow-xl transition-colors bg-yellow-400 text-black hover:bg-yellow-500 border border-yellow-300"
-          style={{
-            top: `${btn.y}%`,
-            left: `${btn.x}%`,
-            transform: 'translate(-50%, -50%)',
-          }}
-        >
-          Click Me
-        </motion.button>
-      ))}
+      {buttons.length > 0 ? (
+        <>
+          {buttons.map((btn) => (
+            <motion.button
+              key={btn.id}
+              initial={{ scale: 0, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              whileHover={{ scale: 1.05, zIndex: 20 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => handleClick(btn)}
+              className="absolute px-5 py-2.5 rounded-lg font-black text-[11px] uppercase tracking-tighter shadow-xl transition-colors bg-yellow-400 text-black hover:bg-yellow-500 border border-yellow-300"
+              style={{
+                top: `${btn.y}%`,
+                left: `${btn.x}%`,
+                transform: 'translate(-50%, -50%)',
+              }}
+            >
+              Click Me
+            </motion.button>
+          ))}
 
-      <AnimatePresence>
-        {message && (
-          <motion.div 
-            initial={{ y: 20, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            exit={{ y: 20, opacity: 0 }}
-            className="fixed bottom-12 left-1/2 -translate-x-1/2 bg-red-500/90 backdrop-blur-md px-8 py-4 rounded-2xl text-xs font-black uppercase tracking-widest shadow-2xl z-50 text-white border border-white/20"
-          >
-            {message}
-          </motion.div>
-        )}
-      </AnimatePresence>
+          <AnimatePresence>
+            {message && (
+              <motion.div 
+                initial={{ y: 20, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                exit={{ y: 20, opacity: 0 }}
+                className="fixed bottom-12 left-1/2 -translate-x-1/2 bg-red-500/90 backdrop-blur-md px-8 py-4 rounded-2xl text-xs font-black uppercase tracking-widest shadow-2xl z-50 text-white border border-white/20"
+              >
+                {message}
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </>
+      ) : (
+        <div className="flex items-center justify-center w-full h-full text-white text-lg">Loading...</div>
+      )}
     </div>
   );
 };

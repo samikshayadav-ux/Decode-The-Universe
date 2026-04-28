@@ -4,17 +4,15 @@ import { callGateway, advanceRound2Stage, completeRound } from '../../utils/quiz
 
 // Import all game components
 import Game1 from '../components/Game1';
-import Game2 from '../components/Game2';
 import Game3 from '../components/Game3';
 import Game4 from '../components/Game4';
 import Game5 from '../components/Game5';
 import Game6 from '../components/Game6';
 import Game7 from '../components/Game7';
-import Game8 from '../components/Game8';
 import Game9 from '../components/Game9';
 import Game10 from '../components/Game10';
 
-const TOTAL_STAGES = 10;
+const TOTAL_STAGES = 8;
 
 const TreasureHuntRound2 = () => {
   const [introDone, setIntroDone] = useState(false);
@@ -138,8 +136,8 @@ const TreasureHuntRound2 = () => {
   };
 
   const games = [
-    Game1, Game2, Game3, Game4, Game5,
-    Game6, Game7, Game8, Game9, Game10
+    Game1, Game3, Game4, Game5,
+    Game6, Game7, Game9, Game10
   ];
 
   const CurrentGame = games[currentStage - 1];
@@ -239,7 +237,7 @@ const TreasureHuntRound2 = () => {
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
                 transition={{ duration: 0.4 }}
-                className={`w-full ${currentStage === 2 ? 'max-w-3xl' : 'h-full'}`}
+                className={`w-full ${currentStage === 1 ? 'max-w-3xl' : 'h-full'}`}
               >
                 <CurrentGame onComplete={handleNextStage} />
               </motion.div>

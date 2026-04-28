@@ -1,32 +1,482 @@
 [
   {
     "id": 1,
-    "question": "What is the capital of France?",
-    "options": ["Berlin", "Madrid", "Paris", "Rome"],
-    "answer": "Paris"
+    "category": "General Knowledge",
+    "difficulty": "Easy",
+    "question": "How many sides does a hexagon have?",
+    "options": ["5", "6", "7", "8"],
+    "answer": "6"
   },
   {
     "id": 2,
-    "question": "Which planet is known as the Red Planet?",
-    "options": ["Earth", "Mars", "Jupiter", "Saturn"],
-    "answer": "Mars"
+    "category": "General Knowledge",
+    "difficulty": "Easy",
+    "question": "What is the capital city of France?",
+    "options": ["Lyon", "Bordeaux", "Marseille", "Paris"],
+    "answer": "Paris"
   },
   {
     "id": 3,
-    "question": "Who wrote 'Hamlet'?",
-    "options": ["Charles Dickens", "William Shakespeare", "Mark Twain", "Jane Austen"],
-    "answer": "William Shakespeare"
+    "category": "General Knowledge",
+    "difficulty": "Easy",
+    "question": "Which is the only mammal that can truly fly?",
+    "options": ["Flying Squirrel", "Sugar Glider", "Bat", "Colugos"],
+    "answer": "Bat"
   },
   {
     "id": 4,
-    "question": "What is the largest ocean on Earth?",
-    "options": ["Atlantic Ocean", "Indian Ocean", "Arctic Ocean", "Pacific Ocean"],
-    "answer": "Pacific Ocean"
+    "category": "General Knowledge",
+    "difficulty": "Easy",
+    "question": "Who painted the Mona Lisa?",
+    "options": ["Michelangelo", "Raphael", "Leonardo da Vinci", "Van Gogh"],
+    "answer": "Leonardo da Vinci"
   },
   {
     "id": 5,
-    "question": "Which element has the chemical symbol 'O'?",
-    "options": ["Gold", "Oxygen", "Silver", "Iron"],
-    "answer": "Oxygen"
+    "category": "General Knowledge",
+    "difficulty": "Easy",
+    "question": "Which is the largest ocean on Earth?",
+    "options": ["Atlantic", "Indian", "Arctic", "Pacific"],
+    "answer": "Pacific"
+  },
+  {
+    "id": 6,
+    "category": "General Knowledge",
+    "difficulty": "Medium",
+    "question": "Donald Trump was inaugurated as the US President for the second time in which month of 2025?",
+    "options": ["November", "December", "January", "February"],
+    "answer": "January"
+  },
+  {
+    "id": 7,
+    "category": "General Knowledge",
+    "difficulty": "Medium",
+    "question": "Which country hosted the G20 Summit in 2025?",
+    "options": ["India", "Brazil", "South Africa", "Japan"],
+    "answer": "Brazil"
+  },
+  {
+    "id": 8,
+    "category": "General Knowledge",
+    "difficulty": "Medium",
+    "question": "India's astronaut Shubhanshu Shukla is set to travel to the ISS as part of which mission in 2025?",
+    "options": ["Axiom Ax-3", "Axiom Ax-4", "Gaganyaan-1", "Crew Dragon-9"],
+    "answer": "Axiom Ax-4"
+  },
+  {
+    "id": 9,
+    "category": "General Knowledge",
+    "difficulty": "Medium",
+    "question": "Which country won the ICC Champions Trophy 2025?",
+    "options": ["India", "Australia", "New Zealand", "Pakistan"],
+    "answer": "India"
+  },
+  {
+    "id": 10,
+    "category": "General Knowledge",
+    "difficulty": "Medium",
+    "question": "As of 2025, who is the Prime Minister of the United Kingdom?",
+    "options": ["Rishi Sunak", "Boris Johnson", "Keir Starmer", "Liz Truss"],
+    "answer": "Keir Starmer"
+  },
+  {
+    "id": 11,
+    "category": "General Knowledge",
+    "difficulty": "Medium",
+    "question": "The FIFA World Cup 2026 will be jointly hosted by which three countries?",
+    "options": ["England, France & Spain", "Brazil, Argentina & Chile", "USA, Canada & Mexico", "Australia, Japan & South Korea"],
+    "answer": "USA, Canada & Mexico"
+  },
+  {
+    "id": 12,
+    "category": "General Knowledge",
+    "difficulty": "Medium",
+    "question": "As of early 2026, who is the richest person in the world?",
+    "options": ["Jeff Bezos", "Bill Gates", "Elon Musk", "Bernard Arnault"],
+    "answer": "Elon Musk"
+  },
+  {
+    "id": 13,
+    "category": "General Knowledge",
+    "difficulty": "Medium",
+    "question": "Which country won the ICC Women's T20 World Cup 2025?",
+    "options": ["Australia", "England", "India", "South Africa"],
+    "answer": "India"
+  },
+  {
+    "id": 14,
+    "category": "General Knowledge",
+    "difficulty": "Medium",
+    "question": "Pope Francis passed away in April 2025 — how many years had he served as Pope?",
+    "options": ["8 years", "10 years", "12 years", "15 years"],
+    "answer": "12 years"
+  },
+  {
+    "id": 15,
+    "category": "General Knowledge",
+    "difficulty": "Medium",
+    "question": "Which country did Mark Carney become Prime Minister of in 2025?",
+    "options": ["Australia", "New Zealand", "United Kingdom", "Canada"],
+    "answer": "Canada"
+  },
+  {
+    "id": 16,
+    "category": "General Knowledge",
+    "difficulty": "Hard",
+    "question": "Who succeeded Pope Francis as the new Pope in 2025, taking the name Pope Leo XIV?",
+    "options": ["Cardinal Parolin", "Cardinal Tagle", "Robert Prevost", "Cardinal Sarah"],
+    "answer": "Robert Prevost"
+  },
+  {
+    "id": 17,
+    "category": "General Knowledge",
+    "difficulty": "Hard",
+    "question": "India's Gaganyaan mission — India's first crewed spaceflight — is scheduled for which year?",
+    "options": ["2025", "2026", "2027", "2028"],
+    "answer": "2026"
+  },
+  {
+    "id": 18,
+    "category": "General Knowledge",
+    "difficulty": "Hard",
+    "question": "Which country assumed the Presidency of the G20 in 2025?",
+    "options": ["India", "Germany", "South Africa", "Brazil"],
+    "answer": "Brazil"
+  },
+  {
+    "id": 19,
+    "category": "General Knowledge",
+    "difficulty": "Hard",
+    "question": "The UN Secretary-General's term was extended — who currently holds the position as of 2026?",
+    "options": ["Ban Ki-moon", "Kofi Annan", "Antonio Guterres", "Mark Rutte"],
+    "answer": "Antonio Guterres"
+  },
+  {
+    "id": 20,
+    "category": "General Knowledge",
+    "difficulty": "Hard",
+    "question": "Which Indian state became the first in India to implement a Uniform Civil Code in 2025?",
+    "options": ["Gujarat", "Himachal Pradesh", "Uttarakhand", "Goa"],
+    "answer": "Uttarakhand"
+  },
+  {
+    "id": 21,
+    "category": "Pop Culture",
+    "difficulty": "Easy",
+    "question": "Which app did Elon Musk rename Twitter to in 2023?",
+    "options": ["T", "Alpha", "X", "Xitter"],
+    "answer": "X"
+  },
+  {
+    "id": 22,
+    "category": "Pop Culture",
+    "difficulty": "Easy",
+    "question": "What is the name of Elon Musk's rocket company that launches rockets to space?",
+    "options": ["Blue Origin", "Virgin Galactic", "Rocket Lab", "SpaceX"],
+    "answer": "SpaceX"
+  },
+  {
+    "id": 23,
+    "category": "Pop Culture",
+    "difficulty": "Easy",
+    "question": "Which streaming platform released Squid Game?",
+    "options": ["Amazon Prime", "Disney+", "HBO Max", "Netflix"],
+    "answer": "Netflix"
+  },
+  {
+    "id": 24,
+    "category": "Pop Culture",
+    "difficulty": "Easy",
+    "question": "Who is the CEO of Tesla and SpaceX?",
+    "options": ["Jeff Bezos", "Mark Zuckerberg", "Tim Cook", "Elon Musk"],
+    "answer": "Elon Musk"
+  },
+  {
+    "id": 25,
+    "category": "Pop Culture",
+    "difficulty": "Easy",
+    "question": "Which Indian movie franchise features Allu Arjun as Pushpa Raj?",
+    "options": ["RRR", "KGF", "Pushpa", "Baahubali"],
+    "answer": "Pushpa"
+  },
+  {
+    "id": 26,
+    "category": "Pop Culture",
+    "difficulty": "Medium",
+    "question": "Which film won the Academy Award for Best Picture at the 2025 Oscars?",
+    "options": ["Wicked", "Conclave", "The Brutalist", "Emilia Perez"],
+    "answer": "Conclave"
+  },
+  {
+    "id": 27,
+    "category": "Pop Culture",
+    "difficulty": "Medium",
+    "question": "Which team won the IPL 2025 season?",
+    "options": ["Mumbai Indians", "Royal Challengers Bengaluru", "Chennai Super Kings", "Kolkata Knight Riders"],
+    "answer": "Royal Challengers Bengaluru"
+  },
+  {
+    "id": 28,
+    "category": "Pop Culture",
+    "difficulty": "Medium",
+    "question": "Kendrick Lamar performed at the Super Bowl LIX halftime show in 2025 — which city hosted it?",
+    "options": ["Las Vegas", "Los Angeles", "New Orleans", "Miami"],
+    "answer": "New Orleans"
+  },
+  {
+    "id": 29,
+    "category": "Pop Culture",
+    "difficulty": "Medium",
+    "question": "Which Indian cricketer retired from Test cricket in January 2025?",
+    "options": ["Rohit Sharma", "Shubman Gill", "Virat Kohli", "Jasprit Bumrah"],
+    "answer": "Virat Kohli"
+  },
+  {
+    "id": 30,
+    "category": "Pop Culture",
+    "difficulty": "Medium",
+    "question": "Minecraft: The Movie released in 2025 — who plays the lead role?",
+    "options": ["Dwayne Johnson", "Jack Black", "Chris Pratt", "Tom Holland"],
+    "answer": "Jack Black"
+  },
+  {
+    "id": 31,
+    "category": "Pop Culture",
+    "difficulty": "Medium",
+    "question": "Which rapper's diss track 'Not Like Us' won Record of the Year at the 2025 Grammys?",
+    "options": ["Drake", "J. Cole", "Lil Baby", "Kendrick Lamar"],
+    "answer": "Kendrick Lamar"
+  },
+  {
+    "id": 32,
+    "category": "Pop Culture",
+    "difficulty": "Medium",
+    "question": "Pope Francis passed away in April 2025. Which country is he from?",
+    "options": ["Italy", "Spain", "Portugal", "Argentina"],
+    "answer": "Argentina"
+  },
+  {
+    "id": 33,
+    "category": "Pop Culture",
+    "difficulty": "Medium",
+    "question": "Which Indian film starring Salman Khan released in 2025 was one of the most anticipated?",
+    "options": ["Tiger 4", "Dabangg 4", "Sikandar", "Sultan 2"],
+    "answer": "Sikandar"
+  },
+  {
+    "id": 34,
+    "category": "Pop Culture",
+    "difficulty": "Medium",
+    "question": "Who won the Ballon d'Or 2024 — football's most prestigious individual award?",
+    "options": ["Kylian Mbappe", "Erling Haaland", "Vinicius Jr.", "Rodri"],
+    "answer": "Rodri"
+  },
+  {
+    "id": 35,
+    "category": "Pop Culture",
+    "difficulty": "Medium",
+    "question": "Which Indian-origin astronaut was stranded on the ISS for over 9 months and returned in 2025?",
+    "options": ["Rakesh Sharma", "Kalpana Chawla", "Shubhanshu Shukla", "Sunita Williams"],
+    "answer": "Sunita Williams"
+  },
+  {
+    "id": 36,
+    "category": "Pop Culture",
+    "difficulty": "Hard",
+    "question": "Squid Game Season 3 — the final season — released in 2025. Who plays the main character Player 456?",
+    "options": ["Park Hae-soo", "Wi Ha-jun", "Lee Jung-jae", "Im Si-wan"],
+    "answer": "Lee Jung-jae"
+  },
+  {
+    "id": 37,
+    "category": "Pop Culture",
+    "difficulty": "Hard",
+    "question": "Which rapper won the Grammy for Best Rap Album at the 2025 Grammy Awards?",
+    "options": ["Drake", "Kendrick Lamar", "J. Cole", "Lil Baby"],
+    "answer": "Kendrick Lamar"
+  },
+  {
+    "id": 38,
+    "category": "Pop Culture",
+    "difficulty": "Hard",
+    "question": "GTA VI is one of the most anticipated games ever — which studio is developing it?",
+    "options": ["Ubisoft", "Activision", "Rockstar Games", "CD Projekt Red"],
+    "answer": "Rockstar Games"
+  },
+  {
+    "id": 39,
+    "category": "Pop Culture",
+    "difficulty": "Hard",
+    "question": "Which Indian movie crossed 1000 crore at the worldwide box office in early 2025?",
+    "options": ["Sky Force", "Sikandar", "Raid 2", "Pushpa 2: The Rule"],
+    "answer": "Pushpa 2: The Rule"
+  },
+  {
+    "id": 40,
+    "category": "Pop Culture",
+    "difficulty": "Hard",
+    "question": "At the 2025 Oscars, which film won the most awards including Best Director?",
+    "options": ["Wicked", "Emilia Perez", "The Brutalist", "Conclave"],
+    "answer": "The Brutalist"
+  },
+  {
+    "id": 41,
+    "category": "Tech Trivia",
+    "difficulty": "Easy",
+    "question": "Which company makes the iPhone?",
+    "options": ["Samsung", "Nokia", "Apple", "Sony"],
+    "answer": "Apple"
+  },
+  {
+    "id": 42,
+    "category": "Tech Trivia",
+    "difficulty": "Easy",
+    "question": "Who founded Facebook, now known as Meta?",
+    "options": ["Jack Dorsey", "Evan Spiegel", "Mark Zuckerberg", "Brian Acton"],
+    "answer": "Mark Zuckerberg"
+  },
+  {
+    "id": 43,
+    "category": "Tech Trivia",
+    "difficulty": "Easy",
+    "question": "Which company owns YouTube?",
+    "options": ["Apple", "Meta", "Amazon", "Google"],
+    "answer": "Google"
+  },
+  {
+    "id": 44,
+    "category": "Tech Trivia",
+    "difficulty": "Easy",
+    "question": "What does AI stand for?",
+    "options": ["Automated Internet", "Artificial Intelligence", "Advanced Integration", "Automated Information"],
+    "answer": "Artificial Intelligence"
+  },
+  {
+    "id": 45,
+    "category": "Tech Trivia",
+    "difficulty": "Easy",
+    "question": "Which company makes the Android operating system?",
+    "options": ["Apple", "Microsoft", "Samsung", "Google"],
+    "answer": "Google"
+  },
+  {
+    "id": 46,
+    "category": "Tech Trivia",
+    "difficulty": "Medium",
+    "question": "Which company created ChatGPT?",
+    "options": ["Google", "Anthropic", "Microsoft", "OpenAI"],
+    "answer": "OpenAI"
+  },
+  {
+    "id": 47,
+    "category": "Tech Trivia",
+    "difficulty": "Medium",
+    "question": "Which company owns AWS (Amazon Web Services)?",
+    "options": ["Microsoft", "Google", "IBM", "Amazon"],
+    "answer": "Amazon"
+  },
+  {
+    "id": 48,
+    "category": "Tech Trivia",
+    "difficulty": "Medium",
+    "question": "What is the parent company of Instagram and WhatsApp?",
+    "options": ["Google", "Apple", "Meta", "Microsoft"],
+    "answer": "Meta"
+  },
+  {
+    "id": 49,
+    "category": "Tech Trivia",
+    "difficulty": "Medium",
+    "question": "Google's AI model that directly competes with ChatGPT is called what?",
+    "options": ["Bard", "Claude", "Copilot", "Gemini"],
+    "answer": "Gemini"
+  },
+  {
+    "id": 50,
+    "category": "Tech Trivia",
+    "difficulty": "Medium",
+    "question": "Which company released the AI assistant Copilot integrated into Windows in 2025?",
+    "options": ["Apple", "Google", "Meta", "Microsoft"],
+    "answer": "Microsoft"
+  },
+  {
+    "id": 51,
+    "category": "Tech Trivia",
+    "difficulty": "Hard",
+    "question": "OpenAI released a powerful reasoning model in late 2024 — what is it called?",
+    "options": ["GPT-5", "Claude 3.5", "Gemini Ultra", "OpenAI o1"],
+    "answer": "OpenAI o1"
+  },
+  {
+    "id": 52,
+    "category": "Tech Trivia",
+    "difficulty": "Hard",
+    "question": "Apple's M-series chips replaced processors originally supplied by which company?",
+    "options": ["AMD", "Qualcomm", "Intel", "NVIDIA"],
+    "answer": "Intel"
+  },
+  {
+    "id": 53,
+    "category": "Tech Trivia",
+    "difficulty": "Hard",
+    "question": "Which Indian-origin CEO leads Microsoft as of 2025?",
+    "options": ["Sundar Pichai", "Arvind Krishna", "Satya Nadella", "Shantanu Narayen"],
+    "answer": "Satya Nadella"
+  },
+  {
+    "id": 54,
+    "category": "Tech Trivia",
+    "difficulty": "Hard",
+    "question": "Which AI model released by Anthropic in 2025 is considered a top rival to GPT-4o?",
+    "options": ["Gemini 1.5", "Claude 3.7 Sonnet", "Llama 3", "Mistral Large"],
+    "answer": "Claude 3.7 Sonnet"
+  },
+  {
+    "id": 55,
+    "category": "Tech Trivia",
+    "difficulty": "Hard",
+    "question": "In 2025, which company became the most valuable in the world briefly surpassing Apple — driven by AI chip demand?",
+    "options": ["Microsoft", "Meta", "NVIDIA", "Tesla"],
+    "answer": "NVIDIA"
+  },
+  {
+    "id": 56,
+    "category": "Science",
+    "difficulty": "Easy",
+    "question": "What is the chemical formula for water?",
+    "options": ["HO", "H2O2", "H2O", "OH"],
+    "answer": "H2O"
+  },
+  {
+    "id": 57,
+    "category": "Science",
+    "difficulty": "Easy",
+    "question": "What is the powerhouse of the cell?",
+    "options": ["Nucleus", "Ribosome", "Golgi Apparatus", "Mitochondria"],
+    "answer": "Mitochondria"
+  },
+  {
+    "id": 58,
+    "category": "Science",
+    "difficulty": "Medium",
+    "question": "Saturn overtook Jupiter as the planet with the most moons — approximately how many moons does Saturn have as of 2025?",
+    "options": ["Over 50", "Over 80", "Over 100", "Over 140"],
+    "answer": "Over 140"
+  },
+  {
+    "id": 59,
+    "category": "Science",
+    "difficulty": "Medium",
+    "question": "CRISPR-Cas9 gene editing won the Nobel Prize in Chemistry — in which year?",
+    "options": ["2018", "2019", "2020", "2021"],
+    "answer": "2020"
+  },
+  {
+    "id": 60,
+    "category": "Science",
+    "difficulty": "Hard",
+    "question": "India's Aditya-L1 solar mission reached its final orbit around the L1 Lagrange point in early 2024 — what does L1 stand for?",
+    "options": ["Lunar 1 Point", "First Lagrange Point", "Light 1 Position", "Linear 1 Zone"],
+    "answer": "First Lagrange Point"
   }
 ]
