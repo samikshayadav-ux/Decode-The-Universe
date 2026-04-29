@@ -9,10 +9,18 @@ import Game4 from '../components/Game4';
 import Game5 from '../components/Game5';
 import Game6 from '../components/Game6';
 import Game7 from '../components/Game7';
+<<<<<<< HEAD
 import Game9 from '../components/Game9';
 import Game10 from '../components/Game10';
 
 const TOTAL_STAGES = 8;
+=======
+import Game8 from '../components/Game8';
+import Game9 from '../components/Game9';
+import Game10 from '../components/Game10';
+
+const TOTAL_STAGES = 10;
+>>>>>>> upstream/main
 
 const TreasureHuntRound2 = () => {
   const [introDone, setIntroDone] = useState(false);
@@ -136,8 +144,13 @@ const TreasureHuntRound2 = () => {
   };
 
   const games = [
+<<<<<<< HEAD
     Game1, Game3, Game4, Game5,
     Game6, Game7, Game9, Game10
+=======
+    Game1, Game2, Game3, Game4, Game5,
+    Game6, Game7, Game8, Game9, Game10
+>>>>>>> upstream/main
   ];
 
   const CurrentGame = games[currentStage - 1];
@@ -237,7 +250,11 @@ const TreasureHuntRound2 = () => {
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
                 transition={{ duration: 0.4 }}
+<<<<<<< HEAD
                 className={`w-full ${currentStage === 1 ? 'max-w-3xl' : 'h-full'}`}
+=======
+                className={`w-full ${currentStage === 2 ? 'max-w-3xl' : 'h-full'}`}
+>>>>>>> upstream/main
               >
                 <CurrentGame onComplete={handleNextStage} />
               </motion.div>
@@ -268,4 +285,8 @@ const TreasureHuntRound2 = () => {
   );
 };
 
+<<<<<<< HEAD
 export default TreasureHuntRound2;
+=======
+export default TreasureHuntRound2;
+>>>>>>> upstream/main
